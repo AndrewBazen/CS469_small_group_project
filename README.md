@@ -1,5 +1,4 @@
 # CS469_small_group_project
-# CS469 Small Group Project
 
 ## Project Overview
 
@@ -32,24 +31,24 @@ This project involves building a three-tiered client-server system using a MySQL
     ```
 
 2. **Set up the MySQL database**:
-    - Create the necessary database and tables.
-        ```shell
-        mysql -u root -p < database.sql
-        ```
+    Create the necessary database and tables.
+    ```shell
+    mysql -u root -p < database.sql
+    ```
 
 3. **Configure the application server**:
-    - Set up the server to handle RPC messages and interact with the MySQL database.
-        build and compile the server using the include make file:
-        ```shell
-        make
-        ```
+    Set up the server to handle RPC messages and interact with the MySQL database.
+    build and compile the server using the include make file:
+    ```shell
+    make
+    ```
 
 4. **Run the client**:
-    - Use the command line client to interact with the application server.
-        ```shell
-        ./client
-        ```
-    - Follow the prompts to authenticate and interact with the server.
+    Use the command line client to interact with the application server.
+    ```shell
+    ./client
+    ```
+    Follow the prompts to authenticate and interact with the server.
 
 ## Usage
 
