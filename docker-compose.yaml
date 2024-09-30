@@ -1,0 +1,17 @@
+services:
+  mysql:
+    container_name: mysql
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    volumes:
+      - mysqldb:/var/lib/mysql
+    environment:
+      - MYSQL_USER=external_user
+      - MYSQL_PASSWORD=password
+      - MYSQL_DATABASE=my_database
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - "3306:3306"
+volumes:
+  mysqldb:
