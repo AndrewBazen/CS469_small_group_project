@@ -9,11 +9,10 @@
 
 #define CONNECTOR_H
 
-MYSQL* db_connect(
-  char *host, char *user, char *password, char *db, unsigned int port
-  ) {
-  MYSQL* connection;
-  MYSQL_RES* result;
+MYSQL *db_connect(
+    char *host, char *user, char *password, char *db, unsigned int port) {
+  MYSQL *connection;
+  MYSQL_RES *result;
 
   if ((connection = mysql_init(NULL)) == NULL) {
     fprintf(stderr, "Could not initialize mysql: %s\n", mysql_error(connection));
@@ -43,6 +42,6 @@ MYSQL* db_connect(
   return connection;
 }
 
-void db_close(MYSQL* db) {
+void db_close(MYSQL *db) {
   mysql_close(db);
 }
