@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "connector.h": "c",
+        "stdlib.h": "c",
+        "mysql.h": "c"
+    }
+}
