@@ -1,0 +1,35 @@
+FROM debian:latest
+
+# Install necessary packages (OpenSSL for generating certs, gcc, etc.)
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libmysqlclient-dev \
+    openssl \
+    libssl-dev \
+    libmicrohttpd-dev \
+    && apt-get clean
+
+# Generate SSL certificates and keys during the build
+RUN /usr/bin/openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+    -keyout /etc/ssl/private/server.key \
+    -out /etc/ssl/certs/server.crt \
+    -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=localhost"
+
+# Copy the script to generate SSL certs to the container
+COPY ./generate-ssl.sh /usr/src/app/generate-ssl.sh
+
+# Make the script executable
+RUN chmod +x /usr/src/app/generate-ssl.sh
+
+# Copy the C server source code to the container
+COPY ./server.c /usr/src/app/server.c
+
+# Compile the C server
+WORKDIR /usr/src/app
+RUN make
+
+# Expose the port your server will run on
+EXPOSE 8888
+
+# Run the C server
+CMD /usr/src/app/generate-ssl.sh
