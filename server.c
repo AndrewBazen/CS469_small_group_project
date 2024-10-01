@@ -11,8 +11,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <mysql/mysql.h>
-#include "./connector.h"
+#include "connector.h"
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>  
 #include <sys/socket.h>
 #include <errno.h>
 #include <openssl/ssl.h>
@@ -20,7 +22,7 @@
 
 #define MAX_QUERY_SIZE 1024
 #define BUFFER_SIZE 1024
-#define PORT 8888
+#define PORT 4433
 #define CERTIFICATE_FILE  "cert.pem"
 #define KEY_FILE          "key.pem"
 
@@ -34,8 +36,8 @@ int create_socket(unsigned int port) {
   }
 
   serv_addr.sin_family = AF_INET;
-  serv_addr.sin_addr.s_addr = INADDR_ANY;
   serv_addr.sin_port = htons(port);
+  serv_addr.sin_addr.s_addr = INADDR_ANY;
 
   if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
     fprintf(stderr, "Server: Unable to bind Socket: %s\n", strerror(errno));
@@ -118,7 +120,7 @@ int main(int argc, char **argv, char **envp) {
   configure_context(ctx);
 
   // connect to the database
-  db = db_connect("localhost", user, password, database, 3306);
+  db = db_connect("mysql", user, password, database, 3306);
 
   // check if the connection was successful
   if (!db) {
@@ -126,6 +128,7 @@ int main(int argc, char **argv, char **envp) {
     printf("Server: Unable to connect to database\n");
     return EXIT_FAILURE;
   }
+  printf("Server: Connected to database\n");
 
   // create a socket and listen for incoming connections
   sockfd = create_socket(PORT);

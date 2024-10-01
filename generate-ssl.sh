@@ -1,6 +1,7 @@
+# Description: Generate a self-signed SSL certificate and key for the C HTTP server
 # Paths to the certificate and key files
-CERT_FILE="/etc/ssl/certs/server.crt"
-KEY_FILE="/etc/ssl/private/server.key"
+CERT_FILE="cert.pem"
+KEY_FILE="key.pem"
 
 # Check if the SSL certificate and key already exist
 if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then

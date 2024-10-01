@@ -1,5 +1,5 @@
 CC := gcc
-LDFLAGS := `mysql_config --cflags --libs` #-lssl -lcrypto add crypto flags later when needed
+LDFLAGS := `mysql_config --cflags --libs` -lssl -lcrypto
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Darwin)
@@ -18,3 +18,6 @@ server: server.o
 
 server.o: server.c
 	$(CC) $(CFLAGS) -c server.c
+
+clean: 
+	rm -f server server.o
