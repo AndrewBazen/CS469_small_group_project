@@ -11,8 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "./sql.h"
-#include "./connector.h"
+#include "connector.c"
 #include <string.h>  // For strlen and strcmp functions
 #include <mysql/mysql.h>
 #include <netinet/in.h>
