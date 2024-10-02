@@ -3,7 +3,7 @@
 / SYNOPSIS: Program exposes a connection to the MySQL database
 ******************************************************************************/
 
-#include "./sql.h"
+#include "repository/sql.h"
 #include <mysql/mysql.h>
 #include <stdio.h>
 #include <stdlib.h>
