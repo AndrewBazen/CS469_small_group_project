@@ -1,0 +1,28 @@
+FROM debian:latest
+
+# Install necessary packages (OpenSSL for generating certs, gcc, etc.)
+RUN apt-get update && apt-get install -y \
+    make \
+    gcc \
+    libmariadb-dev \
+    libmariadb-dev-compat \
+    openssl \
+    libssl-dev \
+    libmicrohttpd-dev \
+    && apt-get clean
+
+# Copy the current directory contents into the container at /usr/src/app
+# make the working directory /usr/src/app
+COPY . /usr/src/app
+WORKDIR /usr/src/app
+
+# Make the script executable
+RUN chmod +x /usr/src/app/generate-ssl.sh
+
+RUN make clean
+
+# compile the C server
+RUN make 
+
+# Run the C server
+CMD /usr/src/app/generate-ssl.sh
