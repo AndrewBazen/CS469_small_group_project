@@ -3,7 +3,7 @@ services:
     container_name: mysql
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: ./Dockerfile.mysql
     volumes:
       - mysqldb:/var/lib/mysql
     environment:
@@ -13,5 +13,33 @@ services:
       - MYSQL_ROOT_PASSWORD=root
     ports:
       - "3306:3306"
+    networks: 
+      - my_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+      timeout: 5s
+  http-server:
+    container_name: http-server
+    build:
+      context: .
+      dockerfile: ./Dockerfile.http-server
+    environment:
+      - MYSQL_USER=external_user
+      - MYSQL_PASSWORD=password
+      - MYSQL_DATABASE=my_database
+      - MYSQL_ROOT_PASSWORD=root
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "4433:4433"
+    networks: 
+      - my_network
 volumes:
   mysqldb:
+networks:
+  my_network:
+    driver: bridge
