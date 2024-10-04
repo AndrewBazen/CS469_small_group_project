@@ -17,6 +17,3 @@ if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
 else
     echo "SSL certificate and key already exist."
 fi
-
-# Start the C HTTP server with SSL
-./server
