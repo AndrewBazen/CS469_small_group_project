@@ -19,10 +19,15 @@ WORKDIR /usr/src/app
 # Make the script executable
 RUN chmod +x /usr/src/app/generate-ssl.sh
 
+RUN /usr/src/app/generate-ssl.sh
+
 RUN make clean
 
 # compile the C server
 RUN make 
 
+# Make port 8443 available to the world outside this container
+EXPOSE 8443
+
 # Run the C server
-CMD /usr/src/app/generate-ssl.sh
+CMD ["./server"]

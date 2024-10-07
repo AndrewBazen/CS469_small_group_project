@@ -1,23 +1,25 @@
 CC := gcc
-LDFLAGS := `mysql_config --cflags --libs` -lssl -lcrypto
+LDFLAGS := -lssl -lcrypto -lmysqlclient
 UNAME := $(shell uname)
 
 ifeq ($(UNAME), Darwin)
-CFLAGS := -I/usr/local/opt/openssl/include -L/usr/local/opt/openssl/lib
-# Check if the original CFLAGS work, if not, use Homebrew path
-TEST_CFLAGS := $(shell $(CC) $(CFLAGS) -E -xc /dev/null >/dev/null 2>&1 && echo "OK" || echo "FAIL")
-ifeq ($(TEST_CFLAGS), FAIL)
-CFLAGS := -I/opt/homebrew/opt/openssl/include -L/opt/homebrew/opt/openssl/lib
-endif
+OPENSSL_PATH := /opt/homebrew/opt/openssl@3
+MYSQL_PATH := /opt/homebrew/opt/mysql
+INCLUDES := -I$(OPENSSL_PATH)/include -I$(MYSQL_PATH)/include
+LIBS := -L$(OPENSSL_PATH)/lib -L$(MYSQL_PATH)/lib
+else
 endif
 
-all: server
+all: server 
 
-server: server.o
-	$(CC) $(CFLAGS) -o server server.o $(LDFLAGS)
+connector.o: connector.c
+	$(CC) $(INCLUDES) -c connector.c
+
+server: server.o connector.o
+	$(CC) -o server server.o connector.o $(LIBS) $(LDFLAGS)
 
 server.o: server.c
-	$(CC) $(CFLAGS) -c server.c
+	$(CC) $(INCLUDES) -c server.c
 
 clean: 
-	rm -f server server.o
+	rm -f server server.o connector.o 

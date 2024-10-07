@@ -3,11 +3,7 @@
 / SYNOPSIS: Program exposes a connection to the MySQL database
 ******************************************************************************/
 
-#include "repository/sql.h"
-#include <mysql/mysql.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include "./connector.h"
+#include "connector.h"
 
 MYSQL *db_connect(
     char *host, char *user, char *password, char *db, unsigned int port) {
