@@ -3,9 +3,10 @@ services:
     container_name: mysql
     build:
       context: .
-      dockerfile: ./Dockerfile.mysql
+      dockerfile: ./Docker/Dockerfile.mysql
     volumes:
       - mysqldb:/var/lib/mysql
+      - ./certs:/etc/mysql/certs 
     environment:
       - MYSQL_USER=external_user
       - MYSQL_PASSWORD=password
@@ -25,7 +26,9 @@ services:
     container_name: http-server
     build:
       context: .
-      dockerfile: ./Dockerfile.http-server
+      dockerfile: ./Docker/Dockerfile.http-server
+    volumes:
+      - ./certs:/etc/mysql/certs
     environment:
       - MYSQL_USER=external_user
       - MYSQL_PASSWORD=password

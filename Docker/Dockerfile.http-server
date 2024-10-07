@@ -17,9 +17,13 @@ COPY . /usr/src/app
 WORKDIR /usr/src/app
 
 # Make the script executable
-RUN chmod +x /usr/src/app/generate-ssl.sh
+RUN chmod +x /usr/src/app/Docker/generate-server-ssl.sh
 
-RUN /usr/src/app/generate-ssl.sh
+RUN /usr/src/app/Docker/generate-server-ssl.sh
+
+# Set the working directory to /usr/src/app to compile the C server
+RUN make clean
+RUN make
 
 RUN make clean
 

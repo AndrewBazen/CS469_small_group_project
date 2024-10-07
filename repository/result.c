@@ -4,8 +4,6 @@
 #include <string.h>
 #include "sql.h"
 
-#define BUFFER_SIZE 256
-
 typedef struct result {
   char            *buffer[BUFFER_SIZE];
   struct result   *next;

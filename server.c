@@ -2,8 +2,8 @@
  * @file server.c
  * @authors ** Andrew Bazen, Ben Merritt, Austen Jarosz **
  * @brief  Main server file that exposes an API to the REPL and queries the database
- * @version 0.1
- * @date 2024-09-30
+ * @version 0.2
+ * @date 2024-10-07
  * 
  * @copyright Copyright (c) 2024
  * 
@@ -14,6 +14,9 @@
 #include <stdbool.h>
 #include "repository/sql.h"
 #include "connector.h"
+#include "utilities.h"
+#include "request.h"
+#include "./repository/table_name.c"
 #include <string.h>
 #include <mysql/mysql.h>
 #include <netinet/in.h>
@@ -27,7 +30,7 @@
 #include <fcntl.h>
 
 #define MAX_QUERY_SIZE 1024
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 256
 #define PORT 8443
 #define CERTIFICATE_FILE  "cert.pem"
 #define KEY_FILE          "key.pem"
@@ -134,74 +137,57 @@ void configure_context(SSL_CTX *ctx) {
   
 }
 
-void handle_request(SSL *ssl, char *user, char *password, char *database) {
-	const char *http_response = 
-					"HTTP/1.1 200 OK\r\n"
-					"Content-Type: text/html\r\n"
-					"Connection: close\r\n"
-					"\r\n";
+int connect_to_db() {
+	char *user = getenv("MYSQL_USER"),
+		*password = getenv("MYSQL_PASSWORD"),
+		*database = getenv("MYSQL_DATABASE");
+	MYSQL *db = db_connect("mysql", user, password, database, 3306);
+
+	if (!db) {
+		printf("Server: Unable to connect to database\n");
+		return -1;
+	}
+	printf("Server: Connected to database\n");
+	return 0;
+}
+
+/**
+ * @brief Handle the request from the client
+ * 
+ * @param ssl the SSL object
+ * @param user the username
+ * @param password the password
+ * @param database the database
+ */
+void handle_request(SSL *ssl) {
 	char buffer[BUFFER_SIZE];
-	char response[BUFFER_SIZE];
-	char request[BUFFER_SIZE];
 	bool exit = false;
+	int nbytes_read;
 	MYSQL *db = NULL;
 
 	while(!exit) {
 		// Read the HTTP GET message from the client
 		// and send the HTTP response
 		bzero(buffer, BUFFER_SIZE);
-		int nbytes_read = SSL_read(ssl, buffer, BUFFER_SIZE);
+		nbytes_read = read_from_ssl(ssl, buffer, BUFFER_SIZE, "Server");
 		if (nbytes_read < 0) {
 			fprintf(stderr, "Server: Unable to read from socket: %s\n", strerror(errno));
 			return;
 		}
-		sscanf(buffer, "GET /%s", &request);
-		printf("Server: Received request: %s\n", request);
+		struct Request req = process_request(buffer, ssl);
+		printf("Server: Received request: %s\n", req.content);
 
-		if (db == NULL) {
-			// Connect to MySQL database
-			db = db_connect("mysql", user, password, database, 3306);
-
-			if (!db) {
-				db_close(db);
-				printf("Server: Unable to connect to database\n");
-				return;
-			}
-			printf("Server: Connected to database\n");
-		}
-
-		if (strcmp(request, "exit") == 0) {
+		if (req.operation[0] != '\0') {
+        printf("Server: Processing request from client (%s %s)\n", req.operation, req.content);
+      	}
+		
+		// exit if the user requests to
+		if (strcmp(req.operation, "exit") == 0) {
 			exit = true;
-			sprintf(response, "Goodbye\n");
 		} else {
 			// Execute the query
-			if (mysql_query(db, request)) {
-				fprintf(stderr, "MySQL query failed: %s\n", mysql_error(db));
-				sprintf(response, "MySQL query failed: %s\n", mysql_error(db));
-			} else {
-				MYSQL_RES *result = mysql_store_result(db);
-				if (result) {
-					MYSQL_ROW row;
-					while ((row = mysql_fetch_row(result))) {
-						for (int i = 0; i < mysql_num_fields(result); i++) {
-							sprintf(response, "%s\t", row[i] ? row[i] : "NULL");
-						}
-						sprintf(response, "\n");
-					}
-					mysql_free_result(result);
-				} else {
-					if (mysql_field_count(db) == 0) {
-						sprintf(response, "%lu rows affected\n", (unsigned long)mysql_affected_rows(db));
-					} else {
-						fprintf(stderr, "Could not retrieve result set: %s\n", mysql_error(db));
-						sprintf(response, "Could not retrieve result set: %s\n", mysql_error(db));
-					}
-				}
-			}
 		}
-
 	}
-
 	printf("Server: disconnecting from database\n");
 	db_close(db);
 }
@@ -226,10 +212,9 @@ int main(int argc, char **argv) {
 	int fd;
 	int rcount;
 	char buffer[BUFFER_SIZE];
-	char *user = getenv("MYSQL_USER"),
-		*password = getenv("MYSQL_PASSWORD"),
-		*database = getenv("MYSQL_DATABASE");
 
+	setvbuf(stdout, NULL, _IONBF, 0);  // Disable stdout buffering
+	
 	// initialize and create/configure SSL context
 	init_openssl();
 	ctx = create_context();
@@ -237,6 +222,11 @@ int main(int argc, char **argv) {
 
 	// create a socket and listen for incoming connections
 	listensd = create_socket(PORT);
+
+	// connect to the database
+	if (connect_to_db() < 0) {
+		return EXIT_FAILURE;
+	}
 
 	while (true) {
 		clientsd = accept(listensd, (struct sockaddr *)&addr, &len);
@@ -255,10 +245,9 @@ int main(int argc, char **argv) {
 			ERR_print_errors_fp(stderr);
 		} else {
 			// Read the HTTP GET message from the client and send the HTTP response
-			handle_request(ssl, user, password, database);
+
+			handle_request(ssl);
 		}
-
-
 		// Clean up the SSL data structures created for this client
 		SSL_free(ssl);
 		close(clientsd);

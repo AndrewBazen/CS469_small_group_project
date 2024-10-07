@@ -21,6 +21,10 @@ This project involves building a three-tiered client-server system using a MySQL
 - MySQL Server
 - Command Line Interface
 - Cryptographic Libraries (e.g., OpenSSL)
+- Docker
+- Docker Compose
+- Make
+- GCC
 
 ### Installation and Setup
 
@@ -30,42 +34,31 @@ This project involves building a three-tiered client-server system using a MySQL
     cd CS469_small_group_project
     ```
 
-2. **Set up the MySQL database**:
-    Create the necessary database and tables.
+2. **Build the Docker Containers**: 
     ```shell
-    mysql -u root -p < database.sql
+    docker-compose up --build
     ```
 
-3. **Configure the application server**:
-    Set up the server to handle RPC messages and interact with the MySQL database.
-    build and compile the server using the include make file:
-    ```shell
-    make
-    ```
+## Note: you may need to adjust the Makefile to include the correct path to the 
+## OpenSSL & MYSQL libraries on your system.
 
 4. **Run the client**:
-    Use the command line client to interact with the application server.
+    in a different command line window, run the following command:
     ```shell
-    ./client
+    ./repl localhost:8443
     ```
-    Follow the prompts to authenticate and interact with the server.
-
 ## Usage
 
-1. **Start the MySQL server**:
-    ```shell
-    sudo service mysql start
-    ```
-
-2. **Run the application server**:
-    ```sh
-    gcc -o server server.c -lssl -lcrypto
-    ```
-
-3. **Run the client**:
-    ```sh
-    python client.py
-    ```
+1. **Client Commands**:
+    
+    - **Login**: Authenticate the client.
+    - **Logout**: De-authenticate the client.
+    - **Get Tables**: List all tables in the database.
+    - **Show Table "X"**: Display the contents of a table.
+    - **Insert Into "X"**: Insert a row into a table.
+    - **Update "X"**: Update a row in a table.
+    - **Delete From "X"**: Delete a row from a table.
+    - **Exit**: Exit the client.
 
 ## Contributing
 
