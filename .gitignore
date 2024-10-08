@@ -1,4 +1,8 @@
 server
 server.o
 repl
+repl.o
+connector.o
+request.o
+utilities.o
 .vscode/

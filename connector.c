@@ -15,7 +15,9 @@ MYSQL *db_connect(
     return NULL;
   }
 
-  if (mysql_real_connect(connection, host, user, password, db, port, NULL, 0) == NULL) {
+   mysql_ssl_set(connection, NULL, NULL, "/etc/mysql/certs/rootCA.pem", NULL, NULL);
+
+  if (mysql_real_connect(connection, host, user, password, db, port, NULL, CLIENT_SSL) == NULL) {
     fprintf(stderr, "Could not connect to MySQL database: %s\n", mysql_error(connection));
     mysql_close(connection);
     return NULL;

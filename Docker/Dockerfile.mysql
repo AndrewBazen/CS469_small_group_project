@@ -8,4 +8,6 @@ WORKDIR /app
 
 ADD . /app
 
-CMD ["mysqld"]
+RUN chmod +x /app/Docker/generate-sql-ssl.sh
+
+CMD /app/Docker/generate-sql-ssl.sh
