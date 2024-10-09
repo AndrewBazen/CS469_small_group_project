@@ -8,6 +8,8 @@
 
 #define MAX_INPUT_SIZE 256
 
+void process_input(char *input, MYSQL *db);  //forward decl to resolve warnings
+
 void repl(MYSQL *db) {
     char input[MAX_INPUT_SIZE];
     while (1) {
