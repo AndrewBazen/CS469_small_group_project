@@ -7,7 +7,6 @@
 #include "statement.c"
 
 result* get_columns(MYSQL *db, char *db_name, char *table_name) {
-  ("db_name: %s table_name: %s\n", db_name, table_name);
   MYSQL_BIND    bind[2];
   MYSQL_BIND    result_bind[4];
   MYSQL_ROW     row;
