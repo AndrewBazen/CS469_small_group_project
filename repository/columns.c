@@ -15,6 +15,7 @@ result* get_columns(MYSQL *db, char *db_name, char *table_name) {
   char          column_type[BUFFER_SIZE];
   char          data_type[BUFFER_SIZE];
   char          character_maximum_length[BUFFER_SIZE];
+  int           num_results;
   int           status;
   unsigned long db_name_length = strlen(db_name);
   unsigned long table_name_length = strlen(table_name);
@@ -96,10 +97,9 @@ result* get_columns(MYSQL *db, char *db_name, char *table_name) {
   }
 
   int i;
-
+  num_results = 0;
   while (status == 0) {
     i = 0;
-
     while (i < 4) {
       switch(i) {
         case 0:
@@ -115,15 +115,16 @@ result* get_columns(MYSQL *db, char *db_name, char *table_name) {
           insert_end(&head, &tail, &character_maximum_length[0], true, MYSQL_TYPE_INT24);
           break;
       }
-
       i++;
+      num_results++;
     }
-
     status = mysql_stmt_fetch(stmt);
-
   }
   if (status != MYSQL_NO_DATA) {
     fprintf(stderr, "Database Error: Fetch error: %s\n", mysql_stmt_error(stmt));
+  }
+  if (head != NULL) {
+    head->num_results = num_results;
   }
   
   mysql_stmt_free_result(stmt);

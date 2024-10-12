@@ -9,7 +9,8 @@ typedef struct result {
   char            *buffer[BUFFER_SIZE];
   struct result   *next;
   bool            end_of_row;
-  int             type;            
+  int             type;
+  int             num_results;
 } result;
 
 result* create_result(char *str, bool end_of_row, int type);
