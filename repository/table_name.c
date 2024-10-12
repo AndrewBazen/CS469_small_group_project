@@ -8,9 +8,11 @@
 #include "statement.h"
 
 result* get_table_names(MYSQL *db, char *db_name) {
-  MYSQL_BIND    bind[1];
-  MYSQL_BIND    result_bind[1];
-  MYSQL_ROW     row;
+  const int     num_params = 1;
+  const int     num_cols = 1;
+
+  MYSQL_BIND    bind[num_params];
+  MYSQL_BIND    result_bind[num_cols];
   MYSQL_STMT    *stmt;
   int           status;
   int           num_results;
@@ -81,6 +83,7 @@ result* get_table_names(MYSQL *db, char *db_name) {
   }
   if (head != NULL) {
     head->num_results = num_results;
+    head->num_rows = num_results;
   }
   
   mysql_stmt_free_result(stmt);

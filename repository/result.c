@@ -10,6 +10,8 @@ result* create_result(char *str, bool end_of_row, int type) {
   result *new_result = (result *)malloc(sizeof(result));
 
   *new_result->buffer = (char *)malloc(strlen(str) + 1);
+  new_result->end_of_row = end_of_row;
+  new_result->type = type;
   strcpy(*new_result->buffer, str);
   new_result->next = NULL;
 

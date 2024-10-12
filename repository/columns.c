@@ -2,14 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "columns.h"
+#include "result.h"
 #include "sql.h"
-#include "result.c"
-#include "statement.c"
+#include "statement.h"
 
 result* get_columns(MYSQL *db, char *db_name, char *table_name) {
-  MYSQL_BIND    bind[2];
-  MYSQL_BIND    result_bind[4];
-  MYSQL_ROW     row;
+  const int     num_params = 2;
+  const int     num_cols = 4;
+
+  MYSQL_BIND    bind[num_params];
+  MYSQL_BIND    result_bind[num_cols];
   MYSQL_STMT    *stmt;
   char          column_name[BUFFER_SIZE];
   char          column_type[BUFFER_SIZE];
@@ -100,7 +103,7 @@ result* get_columns(MYSQL *db, char *db_name, char *table_name) {
   num_results = 0;
   while (status == 0) {
     i = 0;
-    while (i < 4) {
+    while (i < num_cols) {
       switch(i) {
         case 0:
           insert_end(&head, &tail, &column_name[0], false, MYSQL_TYPE_STRING);
@@ -112,7 +115,11 @@ result* get_columns(MYSQL *db, char *db_name, char *table_name) {
           insert_end(&head, &tail, &data_type[0], false, MYSQL_TYPE_STRING);
           break;
         case 3:
-          insert_end(&head, &tail, &character_maximum_length[0], true, MYSQL_TYPE_INT24);
+          if (isdigit(character_maximum_length[0])) {
+            insert_end(&head, &tail, &character_maximum_length[0], true, MYSQL_TYPE_INT24);
+          } else {
+            insert_end(&head, &tail, "0", true, MYSQL_TYPE_INT24);
+          }
           break;
       }
       i++;
@@ -125,6 +132,7 @@ result* get_columns(MYSQL *db, char *db_name, char *table_name) {
   }
   if (head != NULL) {
     head->num_results = num_results;
+    head->num_rows = num_results / num_cols;
   }
   
   mysql_stmt_free_result(stmt);

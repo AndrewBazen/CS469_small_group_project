@@ -11,6 +11,7 @@ typedef struct result {
   bool            end_of_row;
   int             type;
   int             num_results;
+  int             num_rows;
 } result;
 
 result* create_result(char *str, bool end_of_row, int type);
