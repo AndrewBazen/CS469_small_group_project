@@ -1,6 +1,7 @@
 #include <mysql/mysql.h>
 #include <stdio.h>
 #include <string.h>
+#include "statement.h"
 
 MYSQL_STMT* create_prepared_statement(MYSQL *db, char *statement) {
   MYSQL_STMT    *stmt;
