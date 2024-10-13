@@ -34,8 +34,11 @@ result* insert(MYSQL *db, char *db_name, char *table_name, char *values[]) {
     fprintf(stderr, "MySQL query failed: Could not get the columns\n");
     return NULL;
   }
+
   i = 0;
   col_result_curr = col_result_head;
+
+  // append the parameters and placeholders, add a comma if not last
   while (col_result_curr != NULL) {
     if ((i % (col_result_head->num_rows + 1)) == 0) {
       strcat(param, *col_result_curr->buffer);
@@ -49,6 +52,7 @@ result* insert(MYSQL *db, char *db_name, char *table_name, char *values[]) {
     i++;
   }
 
+  // validate the columns and values are of same length
   if (values_length != col_result_head->num_rows) {
     fprintf(stderr, "Database Error: Number of values (%d) mismatch number of columns (%d)\n", values_length, col_result_head->num_rows);
     return NULL;
@@ -66,7 +70,7 @@ result* insert(MYSQL *db, char *db_name, char *table_name, char *values[]) {
     return NULL;
   }
 
-  // bind table_schema
+  // bind the values to their parameter
   memset(bind, 0, sizeof(bind));
   i = 0;
   while (i < values_length) {
@@ -93,16 +97,10 @@ result* insert(MYSQL *db, char *db_name, char *table_name, char *values[]) {
   affected_rows = mysql_stmt_affected_rows(stmt);
   if (affected_rows != 1) {
     fprintf(stderr, "Database Error: Invalid affected rows\n");
-    exit(0);
+    return NULL;
   }
 
-  // result_bind[0].buffer_type = MYSQL_TYPE_STRING;
-  // result_bind[0].buffer = (char *)column_name;
-  // result_bind[0].buffer_length = BUFFER_SIZE;
-  // result_bind[0].is_null = 0;
-
-
-  insert_end(&res, &res, "", true, MYSQL_TYPE_INT24);
+  insert_end(&res, &res, "1", true, MYSQL_TYPE_INT24);
   res->num_results = 1;
   res->num_rows = 1;
   
