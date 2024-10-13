@@ -5,10 +5,20 @@
 #include "connector.h"
 #include <string.h>
 #include <mysql/mysql.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
+#define CERTIFICATE_FILE  "cert.pem"
+#define KEY_FILE          "key.pem"
 
 #define MAX_INPUT_SIZE 256
 
-void repl(MYSQL *db) {
+void send_request(const char * input);  //forward decl to resolve warnings
+
+void repl() {
     char input[MAX_INPUT_SIZE];
     while (1) {
         printf("DATABASE QUERIES> ");
@@ -28,48 +38,72 @@ void repl(MYSQL *db) {
             break;
         }
 
-        // Placeholder: Later, process commands and interact with the database
-        if (mysql_query(db, input)) {
-            fprintf(stderr, "MySQL query failed: %s\n", mysql_error(db));
-        } else {
-            MYSQL_RES *result = mysql_store_result(db);
-            if (result) {
-                MYSQL_ROW row;
-                while ((row = mysql_fetch_row(result))) {
-                    for (int i = 0; i < mysql_num_fields(result); i++) {
-                        printf("%s\t", row[i] ? row[i] : "NULL");
-                    }
-                    printf("\n");
-                }
-                mysql_free_result(result);
-            } else {
-                if (mysql_field_count(db) == 0) {
-                    printf("%lu rows affected\n", (unsigned long)mysql_affected_rows(db));
-                } else {
-                    fprintf(stderr, "Could not retrieve result set: %s\n", mysql_error(db));
-                }
-            }
-        }
+        //process MySQL inputs
+        send_request(input);
     }
 }
 
+void send_request(const char * input) {
+  int server_socket;
+  int valread;
+  SSL_CTX * ctx;
+  SSL * ssl;
+  struct sockaddr_in address;
+  char buffer[1024];
+  
+  memset(buffer, 0, sizeof(buffer)); //clear memory (set to 0)
+
+  // Create socket
+  server_socket = socket(AF_INET, SOCK_STREAM, 0);
+  if (server_socket < 0) {
+    perror("Socket could not be created");
+    return;
+  }
+
+  address.sin_family = AF_INET;
+  //same port as server
+  address.sin_port = htons(8443);
+
+  if (inet_pton(AF_INET, "127.0.0.1", & address.sin_addr) <= 0) {
+    printf("Invalid address\n");
+    return;
+  }
+
+  //connect to the server
+  if (connect(server_socket, (struct sockaddr * ) & address, sizeof(address)) < 0) {
+    printf("Connection Failed\n");
+    return;
+  }
+
+  //setup  SSL
+  SSL_library_init();
+  ctx = SSL_CTX_new(TLS_client_method());
+  ssl = SSL_new(ctx);
+  SSL_set_fd(ssl, server_socket);
+
+  if (SSL_connect(ssl) < 0) {
+    ERR_print_errors_fp(stderr);
+  } else {
+
+    //send request to server
+    SSL_write(ssl, input, strlen(input));
+
+    //receive request from server
+    valread = SSL_read(ssl, buffer, sizeof(buffer) - 1);
+    buffer[valread] = '\0';
+    printf("Server's response: %s\n", buffer);
+
+    SSL_shutdown(ssl);
+  }
+
+  SSL_free(ssl);
+  SSL_CTX_free(ctx);
+  close(server_socket);
+}
+
+
 int main(int argc, char **argv, char **envp) {
-    MYSQL *db;
-    char *user = getenv("MYSQL_USER"),
-         *password = getenv("MYSQL_PASSWORD"),
-         *database = getenv("MYSQL_DATABASE");
-
-    db = db_connect("mysql", user, password, database, 3306);
-
-    if (!db) {
-        db_close(db);
-        printf("Server: Unable to connect to database\n");
-        return EXIT_FAILURE;
-    }
-
-    repl(db);
-
-    db_close(db);
-
+    //start repl
+    repl();
     return EXIT_SUCCESS;
 }
