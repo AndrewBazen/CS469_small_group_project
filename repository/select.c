@@ -23,6 +23,10 @@ result* select_all(MYSQL *db, char *db_name, char *table_name) {
   result        *col_result_curr;
 
   col_result_head = get_columns(db, db_name, table_name);
+  if (col_result_head == NULL) {
+    fprintf(stderr, "MySQL query failed: Could not get the columns\n");
+    return NULL;
+  }
   sprintf(query, SQL_SELECT_ALL_FROM_TABLE, table_name);
 
   int  types[col_result_head->num_rows];

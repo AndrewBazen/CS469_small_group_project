@@ -1,7 +1,7 @@
 #ifndef REPO_REQUEST_H
 #define REPO_REQUEST_H
 
-#define BUFFER_SIZE 256
+#define BUFFER_SIZE 512
 
 #include <stdbool.h>
 

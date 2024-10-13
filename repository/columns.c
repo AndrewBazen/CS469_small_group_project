@@ -7,6 +7,13 @@
 #include "sql.h"
 #include "statement.h"
 
+/**
+ * @return result order will be
+ * 1-column_name,
+ * 2-column_type,
+ * 3-data_type,
+ * 4-character_maximum_length
+ */
 result* get_columns(MYSQL *db, char *db_name, char *table_name) {
   const int     num_params = 2;
   const int     num_cols = 4;
