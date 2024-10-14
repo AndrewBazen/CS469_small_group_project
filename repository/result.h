@@ -1,12 +1,12 @@
 #ifndef REPO_REQUEST_H
 #define REPO_REQUEST_H
 
-#define BUFFER_SIZE 512
+#define REPO_BUFFER_SIZE 512
 
 #include <stdbool.h>
 
 typedef struct result {
-  char            *buffer[BUFFER_SIZE];
+  char            *buffer[REPO_BUFFER_SIZE];
   struct result   *next;
   bool            end_of_row;
   int             type;

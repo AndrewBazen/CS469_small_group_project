@@ -18,9 +18,9 @@ result* insert(MYSQL *db, char *db_name, char *table_name, char *values[]) {
   result        *col_result_head;
   result        *col_result_curr;
   result        *res = NULL;
-  char          placeholders[BUFFER_SIZE / 2] = "";
-  char          param[BUFFER_SIZE / 2] = "";
-  char          query[BUFFER_SIZE * 2];
+  char          placeholders[REPO_BUFFER_SIZE / 2] = "";
+  char          param[REPO_BUFFER_SIZE / 2] = "";
+  char          query[REPO_BUFFER_SIZE * 2];
   int           affected_rows;
   int           i;
 

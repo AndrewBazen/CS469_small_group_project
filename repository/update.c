@@ -9,7 +9,7 @@ result* update(MYSQL *db, char *table_name, char *set_field, char *set_value, ch
   MYSQL_BIND    bind[2];
   MYSQL_STMT    *stmt;
   result        *res = NULL;
-  char          query[BUFFER_SIZE];
+  char          query[REPO_BUFFER_SIZE];
   char          affected_rows_str[64];
   int           affected_rows;
 

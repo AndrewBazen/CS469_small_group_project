@@ -12,7 +12,7 @@ result* select_all(MYSQL *db, char *db_name, char *table_name) {
 
   MYSQL_ROW     row;
   MYSQL_RES     *res;
-  char          query[BUFFER_SIZE];
+  char          query[REPO_BUFFER_SIZE];
   int           i = 0;
   int           j = 0;
   int           num_rows = 0;

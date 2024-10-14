@@ -21,10 +21,10 @@ result* get_columns(MYSQL *db, char *db_name, char *table_name) {
   MYSQL_BIND    bind[num_params];
   MYSQL_BIND    result_bind[num_cols];
   MYSQL_STMT    *stmt;
-  char          column_name[BUFFER_SIZE];
-  char          column_type[BUFFER_SIZE];
-  char          data_type[BUFFER_SIZE];
-  char          character_maximum_length[BUFFER_SIZE];
+  char          column_name[REPO_BUFFER_SIZE];
+  char          column_type[REPO_BUFFER_SIZE];
+  char          data_type[REPO_BUFFER_SIZE];
+  char          character_maximum_length[REPO_BUFFER_SIZE];
   int           num_results;
   int           status;
   unsigned long db_name_length = strlen(db_name);
@@ -46,14 +46,14 @@ result* get_columns(MYSQL *db, char *db_name, char *table_name) {
   // bind table_schema
   bind[0].buffer_type = MYSQL_TYPE_STRING;
   bind[0].buffer = db_name;
-  bind[0].buffer_length = BUFFER_SIZE;
+  bind[0].buffer_length = REPO_BUFFER_SIZE;
   bind[0].is_null = 0;
   bind[0].length = &db_name_length;
 
   // bind table_name
   bind[1].buffer_type = MYSQL_TYPE_STRING;
   bind[1].buffer = table_name;
-  bind[1].buffer_length = BUFFER_SIZE;
+  bind[1].buffer_length = REPO_BUFFER_SIZE;
   bind[1].is_null = 0;
   bind[1].length = &table_name_length;
   
@@ -73,22 +73,22 @@ result* get_columns(MYSQL *db, char *db_name, char *table_name) {
 
   result_bind[0].buffer_type = MYSQL_TYPE_STRING;
   result_bind[0].buffer = (char *)column_name;
-  result_bind[0].buffer_length = BUFFER_SIZE;
+  result_bind[0].buffer_length = REPO_BUFFER_SIZE;
   result_bind[0].is_null = 0;
 
   result_bind[1].buffer_type = MYSQL_TYPE_STRING;
   result_bind[1].buffer = (char *)column_type;
-  result_bind[1].buffer_length = BUFFER_SIZE;
+  result_bind[1].buffer_length = REPO_BUFFER_SIZE;
   result_bind[1].is_null = 0;
 
   result_bind[2].buffer_type = MYSQL_TYPE_STRING;
   result_bind[2].buffer = (char *)data_type;
-  result_bind[2].buffer_length = BUFFER_SIZE;
+  result_bind[2].buffer_length = REPO_BUFFER_SIZE;
   result_bind[2].is_null = 0;
 
   result_bind[3].buffer_type = MYSQL_TYPE_INT24;
   result_bind[3].buffer = (char *)character_maximum_length;
-  result_bind[3].buffer_length = BUFFER_SIZE;
+  result_bind[3].buffer_length = REPO_BUFFER_SIZE;
   result_bind[3].is_null = 0;
 
   if (mysql_stmt_bind_result(stmt, result_bind)) {
