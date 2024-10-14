@@ -15,7 +15,7 @@ result* get_table_names(MYSQL *db, char *db_name) {
   MYSQL_STMT    *stmt;
   int           status;
   int           num_results;
-  char          result_name[BUFFER_SIZE];
+  char          result_name[REPO_BUFFER_SIZE];
   unsigned long name_length = strlen(db_name);
   result        *head = NULL;
   result        *tail = NULL;
@@ -33,7 +33,7 @@ result* get_table_names(MYSQL *db, char *db_name) {
   memset(bind, 0, sizeof(bind));
   bind[0].buffer_type = MYSQL_TYPE_STRING;
   bind[0].buffer = db_name;
-  bind[0].buffer_length = BUFFER_SIZE;
+  bind[0].buffer_length = REPO_BUFFER_SIZE;
   bind[0].is_null = 0;
   bind[0].length = &name_length;
   
@@ -53,7 +53,7 @@ result* get_table_names(MYSQL *db, char *db_name) {
   memset(result_bind, 0, sizeof(result_bind));
   result_bind[0].buffer_type = MYSQL_TYPE_STRING;
   result_bind[0].buffer = (char *)result_name;
-  result_bind[0].buffer_length = BUFFER_SIZE;
+  result_bind[0].buffer_length = REPO_BUFFER_SIZE;
   result_bind[0].is_null = 0;
   result_bind[0].length = &name_length;
 
