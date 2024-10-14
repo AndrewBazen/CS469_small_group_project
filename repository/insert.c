@@ -1,4 +1,3 @@
-#include <mysql/mysql.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,13 +18,10 @@ result* insert(MYSQL *db, char *db_name, char *table_name, char *values[]) {
   result        *col_result_head;
   result        *col_result_curr;
   result        *res = NULL;
-  unsigned long table_name_length = strlen(table_name);
   char          placeholders[BUFFER_SIZE / 2] = "";
   char          param[BUFFER_SIZE / 2] = "";
   char          query[BUFFER_SIZE * 2];
   int           affected_rows;
-  int           num_results;
-  int           status;
   int           i;
 
   // get columns in order to format the query
