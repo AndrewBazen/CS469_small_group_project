@@ -16,7 +16,6 @@
 #include "connector.h"
 #include "utilities.h"
 #include "request.h"
-#include "./repository/table_name.c"
 #include <string.h>
 #include <mysql/mysql.h>
 #include <netinet/in.h>
