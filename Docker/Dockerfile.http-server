@@ -21,10 +21,7 @@ RUN chmod +x /usr/src/app/Docker/generate-server-ssl.sh
 
 RUN /usr/src/app/Docker/generate-server-ssl.sh
 
-# Set the working directory to /usr/src/app to compile the C server
-RUN make clean
-RUN make
-
+# Clean the directory
 RUN make clean
 
 # compile the C server

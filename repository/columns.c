@@ -6,6 +6,7 @@
 #include "result.h"
 #include "sql.h"
 #include "statement.h"
+#include <ctype.h>
 
 /**
  * @return result order will be

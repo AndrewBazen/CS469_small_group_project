@@ -68,9 +68,13 @@ void write_to_ssl(SSL *ssl, char* buffer, int size, char* type) {
     int nbytes_written = SSL_write(ssl, buffer, size);
 
     if (strcmp(type, "Server") == 0) {
+        if (strcmp(buffer, "exit") == 0) {
+        printf("Server: Client Disconnected from server\n");
+        free(ssl);
+        }
         // If nbytes_written is less than zero, an error occurred.  Print an error 
         // message and exit the program
-        if (nbytes_written < 0) {
+        else if (nbytes_written < 0) {
         fprintf(stderr, "Server: Error writing to socket: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
         }
@@ -78,7 +82,7 @@ void write_to_ssl(SSL *ssl, char* buffer, int size, char* type) {
         // If nbytes_written is zero, the client closed the connection.  Prints a 
         // message and then closes the socket descriptor, continuing to the next
         // iteration
-        if (nbytes_written == 0) {
+        else if (nbytes_written == 0) {
         printf("Server: Client closed connection\n");
         free(ssl);
         exit(EXIT_FAILURE);

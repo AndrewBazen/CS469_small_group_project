@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <signal.h>
 #include "repository/sql.h"
 #include "connector.h"
 #include "utilities.h"
@@ -33,6 +34,8 @@
 #define PORT 8443
 #define CERTIFICATE_FILE  "cert.pem"
 #define KEY_FILE          "key.pem"
+
+volatile bool server_shutdown = false;
 
 /**
  * @brief Create a socket object
@@ -67,8 +70,6 @@ int create_socket(unsigned int port) {
 		fprintf(stderr, "Server: Unable to listen on Socket: %s\n", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-
-	printf("Server: Listening on port %d\n", port);
 
 	return s;
 }
@@ -160,11 +161,11 @@ int connect_to_db() {
  */
 void handle_request(SSL *ssl) {
 	char buffer[BUFFER_SIZE];
-	bool exit = false;
 	int nbytes_read;
+	bool exit = false;
 	MYSQL *db = NULL;
 
-	while(!exit) {
+	while(!server_shutdown && !exit) {
 		// Read the HTTP GET message from the client
 		// and send the HTTP response
 		bzero(buffer, BUFFER_SIZE);
@@ -174,21 +175,25 @@ void handle_request(SSL *ssl) {
 			return;
 		}
 		struct Request req = process_request(buffer, ssl);
-		printf("Server: Received request: %s\n", req.content);
-
-		if (req.operation[0] != '\0') {
-        printf("Server: Processing request from client (%s %s)\n", req.operation, req.content);
-      	}
 		
-		// exit if the user requests to
 		if (strcmp(req.operation, "exit") == 0) {
 			exit = true;
-		} else {
-			// Execute the query
-		}
+	  	} else if (req.operation[0] != '\0') {
+        	printf("Server: Processing request from client (%s %s)\n", req.operation, req.content);
+      	} 
 	}
-	printf("Server: disconnecting from database\n");
-	db_close(db);
+}
+
+/**
+ * @brief Handle the shutdown signal
+ * 
+ * @param signal the signal
+ */
+void handle_shutdown(int signal) {
+	if (signal == SIGINT || signal == SIGTERM) {
+	server_shutdown = true;
+	printf("Server: Shutdown signal received. Shutting down...\n");
+    }
 }
 
 /**
@@ -212,6 +217,9 @@ int main(int argc, char **argv) {
 	int rcount;
 	char buffer[BUFFER_SIZE];
 
+	signal(SIGINT, handle_shutdown);
+	signal(SIGTERM, handle_shutdown);
+
 	setvbuf(stdout, NULL, _IONBF, 0);  // Disable stdout buffering
 	
 	// initialize and create/configure SSL context
@@ -227,7 +235,8 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	while (true) {
+	while (!server_shutdown) {
+		printf("Server: Listening on port %d\n", PORT);
 		clientsd = accept(listensd, (struct sockaddr *)&addr, &len);
 		if (clientsd < 0) {
 		fprintf(stderr, "Server: Unable to accept connection: %s\n", strerror(errno));
@@ -244,15 +253,19 @@ int main(int argc, char **argv) {
 			ERR_print_errors_fp(stderr);
 		} else {
 			// Read the HTTP GET message from the client and send the HTTP response
-
 			handle_request(ssl);
 		}
 		// Clean up the SSL data structures created for this client
+		printf("Server: Closing connection with client\n");
 		SSL_free(ssl);
 		close(clientsd);
 	}
+	printf("Server: Disconnecting from the database\n");
+	db_close(db);
+
 	close(listensd);
 	SSL_CTX_free(ctx);
 	cleanup_openssl();
+	printf("Server: Shutdown complete\n");
 	return EXIT_SUCCESS;
 }
