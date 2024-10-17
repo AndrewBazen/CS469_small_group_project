@@ -18,6 +18,11 @@
 #define BUFFER_SIZE 256
 
 // Function prototypes
+Request get_request(Request req, char *message, SSL *ssl);
+Request insert_request(Request req, char *message, SSL *ssl);
+Request select_request(Request req, char *message, SSL *ssl);
+Request delete_request(Request req, char *message, SSL *ssl);
+Request update_request(Request req, char *message, SSL *ssl);
 int read_from_ssl(SSL *ssl, char *buffer, int size, char *error);
 void write_to_ssl(SSL *ssl, char *buffer, int size, char *error);
 
