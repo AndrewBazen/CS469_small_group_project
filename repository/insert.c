@@ -37,7 +37,7 @@ result* insert(MYSQL *db, char *db_name, char *table_name, char *values[]) {
   // append the parameters and placeholders, add a comma if not last
   while (col_result_curr != NULL) {
     if ((i % (col_result_head->num_rows + 1)) == 0) {
-      strcat(param, *col_result_curr->buffer);
+      strcat(param, col_result_curr->buffer);
       strcat(placeholders, "?");
       if (col_result_head->num_rows < col_result_head->num_results - i - 1) {
         strcat(param, ",");

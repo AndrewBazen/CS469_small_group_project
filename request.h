@@ -14,6 +14,7 @@
 // Struct definition
 typedef struct Request {
   char  operation[OPERATION_SIZE],
+        type[ARGUMENT_SIZE],
         db_name[ARGUMENT_SIZE],
         table_name[ARGUMENT_SIZE],
         field_name[ARGUMENT_SIZE],

@@ -144,7 +144,7 @@ void configure_context(SSL_CTX *ctx) {
   
 }
 
-int connect_to_db() {
+MYSQL* connect_to_db() {
 	char *user = getenv("MYSQL_USER"),
 		*password = getenv("MYSQL_PASSWORD"),
 		*database = getenv("MYSQL_DATABASE");
@@ -152,10 +152,10 @@ int connect_to_db() {
 
 	if (!db) {
 		printf("Server: Unable to connect to database\n");
-		return -1;
+		exit(EXIT_FAILURE);
 	}
 	printf("Server: Connected to database\n");
-	return 0;
+	return db;
 }
 
 /**
@@ -165,8 +165,9 @@ int connect_to_db() {
  * @param db the database
  * @param req the request
  */
-result* query_database(SSL *ssl, MYSQL *db, Request *req) {
-	result *res;
+result* query_database(SSL *ssl, MYSQL *db, Request *req, result *res) {
+	printf("Server: Querying database\n");
+	
 	if (strcmp(req->operation, "tables") == 0) {
 		res = get_table_names(db, req->db_name);
 	} else if (strcmp(req->operation, "columns") == 0) {
@@ -195,7 +196,8 @@ result* query_database(SSL *ssl, MYSQL *db, Request *req) {
 void handle_request(SSL *ssl, MYSQL *db) {
 	char buffer[BUFFER_SIZE];
 	char response[BUFFER_SIZE];
-	Request *req;
+	Request *req = malloc(sizeof(Request));
+	result *res = malloc(sizeof(result));
 	int nbytes_read;
 	bool exit = false;
 
@@ -210,19 +212,33 @@ void handle_request(SSL *ssl, MYSQL *db) {
 		}
 
 		req = process_request(req, buffer, ssl);
-		printf("Server: Processing request from client (%s)\n", buffer);
+		if (!req) {
+            fprintf(stderr, "Server: Failed to process request\n");
+        }
+
+		printf("req->operation: %s\n", req->operation);
 		
 		if (strcmp(req->operation, "exit") == 0) {
 			exit = true;
 	  	} else if (strcmp(req->operation, "seed-database") == 0) {
 			sprintf(response, "Server: Database seeded\n");
-			write_to_ssl(ssl, "%s\n", sizeof(response), "Server");
+			write_to_ssl(ssl, response, sizeof(response), "Server");
 		} else if (req->operation[0] != '\0') {
+			printf("Server: Handling request with database\n");
         	sprintf(response, "Server: Handling request with database\n");
-			write_to_ssl(ssl, "%s\n", sizeof(response), "Server");
-			query_database(ssl, db, req);
+			write_to_ssl(ssl, response, sizeof(response), "Server");
+			res = query_database(ssl, db, req, res);
+			if (res->buffer[0] != '\0') {
+				printf(" res->buffer: %s\n", res->buffer);
+                write_to_ssl(ssl, res->buffer, strlen(res->buffer), "Server");
+            } else {
+				printf("Server: Query failed\n");
+                sprintf(response, "Server: Query failed\n");
+                write_to_ssl(ssl, response, strlen(response), "Server");
+            }
       	}
 		bzero(response, BUFFER_SIZE);
+		free(req);
 	}
 }
 
@@ -273,9 +289,7 @@ int main(int argc, char **argv) {
 	listensd = create_socket(PORT);
 
 	// connect to the database
-	if (connect_to_db() < 0) {
-		return EXIT_FAILURE;
-	}
+	db = connect_to_db();
 
 	while (!server_shutdown) {
 		printf("Server: Listening on port %d\n", PORT);

@@ -23,41 +23,58 @@ void seed_database() {
 Request* check_args(Request *req, int arg_number, SSL *ssl) {
     char error_buffer[BUFFER_SIZE];
 
+    printf("Checking arguments\n");
+    printf("Operation: %s\n", req->operation);
+
     if (strcmp(req->operation, "insert") == 0) {
         if (arg_number < 3) {
-        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+            sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 3) {
-        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+            sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        } else {
+            return req;
         }
     } else if (strcmp(req->operation, "select") == 0) {
         if (arg_number < 2) {
-        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+            sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 2) {
-        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+            sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        } else {
+            return req;
         }
     } else if (strcmp(req->operation, "delete") == 0) {
         if (arg_number < 3) {
-        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+            sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 3) {
-        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+            sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        } else {
+            return req;
         }
     } else if (strcmp(req->operation, "update") == 0) {
         if (arg_number < 5) {
-        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+            sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 5) {
-        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+            sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        } else {
+            return req;
         }
-    } else if (strcmp(req->operation, "tables") == 0) {
-        if (arg_number < 1) {
-        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
-        } else if (arg_number > 1) {
-        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
-        }
-    } else if (strcmp(req->operation, "columns") == 0) {
-        if (arg_number < 2) {
-        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
-        } else if (arg_number > 2) {
-        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+    } else if (strcmp(req->operation, "get") == 0) {
+        if (strcmp(req->type, "tables") == 0) {
+            if (arg_number < 1) {
+                sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+            } else if (arg_number > 1) {
+                sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+            } else {
+                return req;
+            }
+        } else if (strcmp(req->type, "columns") == 0) {
+            if (arg_number < 2) {
+                sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+            } else if (arg_number > 2) {
+                sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+            } else {
+                return req;
+            }
         }
     }
     write_to_ssl(ssl, error_buffer, strlen(error_buffer), "Server");
@@ -66,18 +83,27 @@ Request* check_args(Request *req, int arg_number, SSL *ssl) {
 }
 
 Request* get_request(Request *req, char *contents, SSL *ssl) {
+    printf("Get request\n");
+    printf("Contents: %s\n", contents);
     char    arguments[BUFFER_SIZE],
             type[BUFFER_SIZE],
             dummy[BUFFER_SIZE];
     int arg_number;
+    int offset = 0;
 
-    sscanf(contents, "%s %s", req->operation, arguments);
+    sscanf(contents, "%s %n", req->type, &offset);
 
-    if (strcmp(type, "tables") == 0) {
+    strncpy(arguments, contents + offset, BUFFER_SIZE - 1);
+    arguments[BUFFER_SIZE - 1] = '\0';
+    printf("Arguments: %s\n", arguments);
+    printf("Type: %s\n", req->type);
+
+    if (strcmp(req->type, "tables") == 0) {
         arg_number = sscanf(arguments, "%s %s", req->db_name, dummy);
+        printf("Tables request: db_name: %s\n", req->db_name);
 
         req = check_args(req, arg_number, ssl);
-    } else if (strcmp(type, "columns") == 0) {
+    } else if (strcmp(req->type, "columns") == 0) {
         arg_number = sscanf(contents, "%s %s %s", req->db_name, req->table_name, dummy);
 
         req = check_args(req, arg_number, ssl);
@@ -131,6 +157,7 @@ Request* insert_request(Request *req, char *contents, SSL *ssl) {
 }
 
 Request* select_request(Request *req, char *contents, SSL *ssl) {
+    printf("Select request\n");
     char dummy[BUFFER_SIZE];
     int arg_number; 
 
