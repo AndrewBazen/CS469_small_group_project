@@ -1,7 +1,7 @@
 #ifndef REQUEST_H
 #define REQUEST_H
 
-#include "utilities.h"
+
 #include <openssl/ssl.h>
 #include <string.h>
 
@@ -25,7 +25,9 @@ typedef struct Request {
         values[VALUES_SIZE][ARGUMENT_SIZE];
 } Request;
 
+#include "utilities.h"
+
 // Function prototypes
-Request process_request(char *message, SSL *ssl);
+Request* process_request(Request *req, char *message, SSL *ssl);
 
 #endif // REQUEST_H

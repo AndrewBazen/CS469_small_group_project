@@ -17,8 +17,7 @@
  * @param ssl - the SSL object
  * @return struct Request - the request struct
  */
-struct Request process_request(char *message, SSL *ssl) {
-    struct Request req;
+Request* process_request(Request *req, char *message, SSL *ssl) {
     const char *operations[] = {"get", "insert", "select", "delete", "update", "seed-database", "exit"};
     const int num_operations = sizeof(operations) / sizeof(operations[0]);
     char    contents[CONTENT_SIZE],
@@ -28,11 +27,11 @@ struct Request process_request(char *message, SSL *ssl) {
     int arg_number;
     bool valid_request = false;
 
-    sscanf(message, "%s %s", req.operation, contents);
+    sscanf(message, "%s %s", req->operation, contents);
 
     // first check if the operation is valid
     for (int i = 0; i < num_operations; i++) {
-        if (strcmp(req.operation, operations[i]) == 0) {
+        if (strcmp(req->operation, operations[i]) == 0) {
             valid_request = true;
             break;
         }
@@ -42,42 +41,42 @@ struct Request process_request(char *message, SSL *ssl) {
     if (!valid_request) {
         sprintf(error_buffer, "error_id-%d: Invalid Request", 3);
         write_to_ssl(ssl, error_buffer, strlen(error_buffer), "Server");
-        req.operation[0] = '\0';
+        req->operation[0] = '\0';
         return req;
     }
 
 	// if the operation is download and the file does not exist, send an error code
     // to the client
-    if (strcmp(req.operation, "exit") == 0) {
+    if (strcmp(req->operation, "exit") == 0) {
         sprintf(exit_buffer, "Disconnecting\n");
         write_to_ssl(ssl, exit_buffer, strlen(exit_buffer), "Server");
         return req;
     } else {
-        if (strcmp(req.operation, "seed-database") == 0) {
+        if (strcmp(req->operation, "seed-database") == 0) {
             seed_database();
         }
         //get
-        if (strcmp(req.operation, "get") == 0) {
+        if (strcmp(req->operation, "get") == 0) {
             req = get_request(req, contents, ssl);
         }
         
         //select
-        if (strcmp(req.operation, "select") == 0) {
+        if (strcmp(req->operation, "select") == 0) {
             req = select_request(req, contents, ssl);
         }
 
         //insert
-        if (strcmp(req.operation, "insert") == 0) {
+        if (strcmp(req->operation, "insert") == 0) {
             req = insert_request(req, contents, ssl);
         }
 
         //delete
-        if (strcmp(req.operation, "delete") == 0) {
+        if (strcmp(req->operation, "delete") == 0) {
             req = delete_request(req, contents, ssl);
         }
 
         //update
-        if (strcmp(req.operation, "update") == 0) {
+        if (strcmp(req->operation, "update") == 0) {
             req = update_request(req, contents, ssl);
         }
     }

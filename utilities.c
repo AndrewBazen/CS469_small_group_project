@@ -20,40 +20,40 @@ void seed_database() {
     }
 }
 
-Request check_args(Request req, int arg_number, SSL *ssl) {
+Request* check_args(Request *req, int arg_number, SSL *ssl) {
     char error_buffer[BUFFER_SIZE];
 
-    if (strcmp(req.operation, "insert") == 0) {
+    if (strcmp(req->operation, "insert") == 0) {
         if (arg_number < 3) {
         sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 3) {
         sprintf(error_buffer, "error_id-%d: too many arguments", 2);
         }
-    } else if (strcmp(req.operation, "select") == 0) {
+    } else if (strcmp(req->operation, "select") == 0) {
         if (arg_number < 2) {
         sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 2) {
         sprintf(error_buffer, "error_id-%d: too many arguments", 2);
         }
-    } else if (strcmp(req.operation, "delete") == 0) {
+    } else if (strcmp(req->operation, "delete") == 0) {
         if (arg_number < 3) {
         sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 3) {
         sprintf(error_buffer, "error_id-%d: too many arguments", 2);
         }
-    } else if (strcmp(req.operation, "update") == 0) {
+    } else if (strcmp(req->operation, "update") == 0) {
         if (arg_number < 5) {
         sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 5) {
         sprintf(error_buffer, "error_id-%d: too many arguments", 2);
         }
-    } else if (strcmp(req.operation, "tables") == 0) {
+    } else if (strcmp(req->operation, "tables") == 0) {
         if (arg_number < 1) {
         sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 1) {
         sprintf(error_buffer, "error_id-%d: too many arguments", 2);
         }
-    } else if (strcmp(req.operation, "columns") == 0) {
+    } else if (strcmp(req->operation, "columns") == 0) {
         if (arg_number < 2) {
         sprintf(error_buffer, "error_id-%d: too few arguments", 1);
         } else if (arg_number > 2) {
@@ -61,31 +61,31 @@ Request check_args(Request req, int arg_number, SSL *ssl) {
         }
     }
     write_to_ssl(ssl, error_buffer, strlen(error_buffer), "Server");
-    req.operation[0] = '\0';
+    req->operation[0] = '\0';
     return req;
 }
 
-Request get_request(Request req, char *contents, SSL *ssl) {
+Request* get_request(Request *req, char *contents, SSL *ssl) {
     char    arguments[BUFFER_SIZE],
             type[BUFFER_SIZE],
             dummy[BUFFER_SIZE];
     int arg_number;
 
-    sscanf(contents, "%s %s", req.operation, arguments);
+    sscanf(contents, "%s %s", req->operation, arguments);
 
     if (strcmp(type, "tables") == 0) {
-        arg_number = sscanf(arguments, "%s %s", req.db_name, dummy);
+        arg_number = sscanf(arguments, "%s %s", req->db_name, dummy);
 
         req = check_args(req, arg_number, ssl);
     } else if (strcmp(type, "columns") == 0) {
-        arg_number = sscanf(contents, "%s %s %s", req.db_name, req.table_name, dummy);
+        arg_number = sscanf(contents, "%s %s %s", req->db_name, req->table_name, dummy);
 
         req = check_args(req, arg_number, ssl);
     }
     return req;
 }
 
-Request insert_request(Request req, char *contents, SSL *ssl) {
+Request* insert_request(Request *req, char *contents, SSL *ssl) {
     char    arguments[BUFFER_SIZE],
             dummy[BUFFER_SIZE];
     char*   value;
@@ -94,7 +94,7 @@ Request insert_request(Request req, char *contents, SSL *ssl) {
     bool parsing_complete = false;
 
 
-    arg_number = sscanf(contents, "%s %s %s", req.db_name, req.table_name, arguments);
+    arg_number = sscanf(contents, "%s %s %s", req->db_name, req->table_name, arguments);
     arg_number = arg_number - 1;
 
     //parse the values in contents
@@ -120,7 +120,7 @@ Request insert_request(Request req, char *contents, SSL *ssl) {
                     j++;
                 }
                 //append the character to the current value
-                req.values[value_number][j] = value[j];
+                req->values[value_number][j] = value[j];
             }
             value_number++;
         }
@@ -130,31 +130,31 @@ Request insert_request(Request req, char *contents, SSL *ssl) {
 
 }
 
-Request select_request(Request req, char *contents, SSL *ssl) {
+Request* select_request(Request *req, char *contents, SSL *ssl) {
     char dummy[BUFFER_SIZE];
     int arg_number; 
 
-    arg_number = sscanf(contents, "%s %s %s", req.db_name, req.table_name, dummy);
+    arg_number = sscanf(contents, "%s %s %s", req->db_name, req->table_name, dummy);
     req = check_args(req, arg_number, ssl);
     return req;
 }
 
-Request delete_request(Request req, char *contents, SSL *ssl) {
+Request* delete_request(Request *req, char *contents, SSL *ssl) {
     char dummy[BUFFER_SIZE];
     int arg_number;
 
-    arg_number = sscanf(contents, "%s %s %s %s", req.table_name, req.field_name,
-        req.field_value, dummy);
+    arg_number = sscanf(contents, "%s %s %s %s", req->table_name, req->field_name,
+        req->field_value, dummy);
     req = check_args(req, arg_number, ssl);
     return req;
 }
 
-Request update_request(Request req, char *contents, SSL *ssl) {
+Request* update_request(Request *req, char *contents, SSL *ssl) {
     char  dummy[BUFFER_SIZE];
     int arg_number;
 
-    arg_number = sscanf(contents, "%s %s %s %s %s %s", req.table_name, req.set_field,
-        req.set_value, req.where_field, req.where_value, dummy);
+    arg_number = sscanf(contents, "%s %s %s %s %s %s", req->table_name, req->set_field,
+        req->set_value, req->where_field, req->where_value, dummy);
     req = check_args(req, arg_number, ssl);
     return req;
 }

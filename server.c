@@ -14,9 +14,15 @@
 #include <stdbool.h>
 #include <signal.h>
 #include "repository/sql.h"
+#include "repository/result.h"
+#include "repository/columns.h"
+#include "repository/delete.h"
+#include "repository/insert.h"
+#include "repository/select.h"
+#include "repository/update.h"
+#include "repository/table_name.h"
 #include "connector.h"
 #include "utilities.h"
-#include "result.h"
 #include "request.h"
 #include <string.h>
 #include <mysql/mysql.h>
@@ -159,24 +165,23 @@ int connect_to_db() {
  * @param db the database
  * @param req the request
  */
-result* query_database(SSL *ssl, MYSQL *db, Request req) {
+result* query_database(SSL *ssl, MYSQL *db, Request *req) {
 	result *res;
-	if (strcmp(req.operation, "tables") == 0) {
-		res = get_table_names(db, ssl, req.db_name);
-	} else if (strcmp(req.operation, "columns") == 0) {
-		get_columns(db, ssl, req.db_name, req.table_name);
-	} else if (strcmp(req.operation, "insert") == 0) {
-		insert_into_table(db, ssl, req.db_name, req.table_name, req.values);
-	} else if (strcmp(req.operation, "select") == 0) {
-		select_from_table(db, ssl, req.db_name, req.table_name);
-	} else if (strcmp(req.operation, "delete") == 0) {
-		delete_from_table(db, ssl, req.db_name, req.table_name, req.where_field, req.where_value);
-	} else if (strcmp(req.operation, "update") == 0) {
-		update_table(db, ssl, req.db_name, req.table_name, req.set_field, req.set_value, req.where_field, req.where_value);
-	} else if (strcmp(req.operation, "seed-database") == 0) {
-		seed_database();
-		
+	if (strcmp(req->operation, "tables") == 0) {
+		res = get_table_names(db, req->db_name);
+	} else if (strcmp(req->operation, "columns") == 0) {
+		res = get_columns(db, req->db_name, req->table_name);
+	} else if (strcmp(req->operation, "insert") == 0) {
+		res = insert(db, req->db_name, req->table_name, (char **)req->values);
+	} else if (strcmp(req->operation, "select") == 0) {
+		res = select_all(db, req->db_name, req->table_name);
+	} else if (strcmp(req->operation, "delete") == 0) {
+		res = delete_from(db, req->table_name, req->field_name, req->field_value);
+	} else if (strcmp(req->operation, "update") == 0) {
+		res = update(db, req->table_name, req->set_field, req->set_value,
+		req->where_field, req->where_value);
 	}
+	return res;
 }
 
 /**
@@ -189,6 +194,8 @@ result* query_database(SSL *ssl, MYSQL *db, Request req) {
  */
 void handle_request(SSL *ssl, MYSQL *db) {
 	char buffer[BUFFER_SIZE];
+	char response[BUFFER_SIZE];
+	Request *req;
 	int nbytes_read;
 	bool exit = false;
 
@@ -202,16 +209,20 @@ void handle_request(SSL *ssl, MYSQL *db) {
 			return;
 		}
 
-		struct Request req = process_request(buffer, ssl);
+		req = process_request(req, buffer, ssl);
 		printf("Server: Processing request from client (%s)\n", buffer);
 		
-		if (strcmp(req.operation, "exit") == 0) {
+		if (strcmp(req->operation, "exit") == 0) {
 			exit = true;
-	  	} else if (req.operation[0] != '\0') {
-        	printf("Server: Handling request with database\n", buffer);
+	  	} else if (strcmp(req->operation, "seed-database") == 0) {
+			sprintf(response, "Server: Database seeded\n");
+			write_to_ssl(ssl, "%s\n", sizeof(response), "Server");
+		} else if (req->operation[0] != '\0') {
+        	sprintf(response, "Server: Handling request with database\n");
+			write_to_ssl(ssl, "%s\n", sizeof(response), "Server");
 			query_database(ssl, db, req);
       	}
-		
+		bzero(response, BUFFER_SIZE);
 	}
 }
 
