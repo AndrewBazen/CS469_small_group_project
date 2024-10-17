@@ -16,6 +16,7 @@
 #include "repository/sql.h"
 #include "connector.h"
 #include "utilities.h"
+#include "result.h"
 #include "request.h"
 #include <string.h>
 #include <mysql/mysql.h>
@@ -152,6 +153,33 @@ int connect_to_db() {
 }
 
 /**
+ * @brief Query the database
+ * 
+ * @param ssl the SSL object
+ * @param db the database
+ * @param req the request
+ */
+result* query_database(SSL *ssl, MYSQL *db, Request req) {
+	result *res;
+	if (strcmp(req.operation, "tables") == 0) {
+		res = get_table_names(db, ssl, req.db_name);
+	} else if (strcmp(req.operation, "columns") == 0) {
+		get_columns(db, ssl, req.db_name, req.table_name);
+	} else if (strcmp(req.operation, "insert") == 0) {
+		insert_into_table(db, ssl, req.db_name, req.table_name, req.values);
+	} else if (strcmp(req.operation, "select") == 0) {
+		select_from_table(db, ssl, req.db_name, req.table_name);
+	} else if (strcmp(req.operation, "delete") == 0) {
+		delete_from_table(db, ssl, req.db_name, req.table_name, req.where_field, req.where_value);
+	} else if (strcmp(req.operation, "update") == 0) {
+		update_table(db, ssl, req.db_name, req.table_name, req.set_field, req.set_value, req.where_field, req.where_value);
+	} else if (strcmp(req.operation, "seed-database") == 0) {
+		seed_database();
+		
+	}
+}
+
+/**
  * @brief Handle the request from the client
  * 
  * @param ssl the SSL object
@@ -159,11 +187,10 @@ int connect_to_db() {
  * @param password the password
  * @param database the database
  */
-void handle_request(SSL *ssl) {
+void handle_request(SSL *ssl, MYSQL *db) {
 	char buffer[BUFFER_SIZE];
 	int nbytes_read;
 	bool exit = false;
-	MYSQL *db = NULL;
 
 	while(!server_shutdown && !exit) {
 		// Read the HTTP GET message from the client
@@ -174,13 +201,17 @@ void handle_request(SSL *ssl) {
 			fprintf(stderr, "Server: Unable to read from socket: %s\n", strerror(errno));
 			return;
 		}
+
 		struct Request req = process_request(buffer, ssl);
+		printf("Server: Processing request from client (%s)\n", buffer);
 		
 		if (strcmp(req.operation, "exit") == 0) {
 			exit = true;
 	  	} else if (req.operation[0] != '\0') {
-        	printf("Server: Processing request from client (%s %s)\n", req.operation, req.content);
-      	} 
+        	printf("Server: Handling request with database\n", buffer);
+			query_database(ssl, db, req);
+      	}
+		
 	}
 }
 
@@ -253,7 +284,7 @@ int main(int argc, char **argv) {
 			ERR_print_errors_fp(stderr);
 		} else {
 			// Read the HTTP GET message from the client and send the HTTP response
-			handle_request(ssl);
+			handle_request(ssl, db);
 		}
 		// Clean up the SSL data structures created for this client
 		printf("Server: Closing connection with client\n");

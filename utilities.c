@@ -7,6 +7,158 @@
 */
 #include "utilities.h"
 
+void seed_database() {
+    const char *command = "docker exec -i mysql /bin/sh ./docker/seed.sh";
+    
+    // Execute the command
+    int result = system(command);
+    
+    if (result == -1) {
+        perror("Error executing script on MySQL container");
+    } else {
+        printf("Script executed successfully on MySQL container\n");
+    }
+}
+
+Request check_args(Request req, int arg_number, SSL *ssl) {
+    char error_buffer[BUFFER_SIZE];
+
+    if (strcmp(req.operation, "insert") == 0) {
+        if (arg_number < 3) {
+        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+        } else if (arg_number > 3) {
+        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        }
+    } else if (strcmp(req.operation, "select") == 0) {
+        if (arg_number < 2) {
+        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+        } else if (arg_number > 2) {
+        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        }
+    } else if (strcmp(req.operation, "delete") == 0) {
+        if (arg_number < 3) {
+        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+        } else if (arg_number > 3) {
+        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        }
+    } else if (strcmp(req.operation, "update") == 0) {
+        if (arg_number < 5) {
+        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+        } else if (arg_number > 5) {
+        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        }
+    } else if (strcmp(req.operation, "tables") == 0) {
+        if (arg_number < 1) {
+        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+        } else if (arg_number > 1) {
+        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        }
+    } else if (strcmp(req.operation, "columns") == 0) {
+        if (arg_number < 2) {
+        sprintf(error_buffer, "error_id-%d: too few arguments", 1);
+        } else if (arg_number > 2) {
+        sprintf(error_buffer, "error_id-%d: too many arguments", 2);
+        }
+    }
+    write_to_ssl(ssl, error_buffer, strlen(error_buffer), "Server");
+    req.operation[0] = '\0';
+    return req;
+}
+
+Request get_request(Request req, char *contents, SSL *ssl) {
+    char    arguments[BUFFER_SIZE],
+            type[BUFFER_SIZE],
+            dummy[BUFFER_SIZE];
+    int arg_number;
+
+    sscanf(contents, "%s %s", req.operation, arguments);
+
+    if (strcmp(type, "tables") == 0) {
+        arg_number = sscanf(arguments, "%s %s", req.db_name, dummy);
+
+        req = check_args(req, arg_number, ssl);
+    } else if (strcmp(type, "columns") == 0) {
+        arg_number = sscanf(contents, "%s %s %s", req.db_name, req.table_name, dummy);
+
+        req = check_args(req, arg_number, ssl);
+    }
+    return req;
+}
+
+Request insert_request(Request req, char *contents, SSL *ssl) {
+    char    arguments[BUFFER_SIZE],
+            dummy[BUFFER_SIZE];
+    char*   value;
+    int arg_number;
+    int value_number = 0;
+    bool parsing_complete = false;
+
+
+    arg_number = sscanf(contents, "%s %s %s", req.db_name, req.table_name, arguments);
+    arg_number = arg_number - 1;
+
+    //parse the values in contents
+    // for each value in contents
+    while (!parsing_complete) {
+        if (value_number >= VALUES_SIZE) {
+            arg_number = 4;
+            break;
+        }
+        if (value_number == 0) {
+            char *value = strtok(arguments, ",");
+        } else {
+            char *value = strtok(NULL, ",");
+        }
+        if (value == NULL) {
+            parsing_complete = true;
+        } else {
+            // for each character in value
+            for (int j = 0; j < strlen(value); j++) {
+                // check if the value is a quotation mark
+                if (value[j] == '"') {
+                    // if it is, skip the quotation mark
+                    j++;
+                }
+                //append the character to the current value
+                req.values[value_number][j] = value[j];
+            }
+            value_number++;
+        }
+        req = check_args(req, arg_number, ssl);
+    }
+    return req;
+
+}
+
+Request select_request(Request req, char *contents, SSL *ssl) {
+    char dummy[BUFFER_SIZE];
+    int arg_number; 
+
+    arg_number = sscanf(contents, "%s %s %s", req.db_name, req.table_name, dummy);
+    req = check_args(req, arg_number, ssl);
+    return req;
+}
+
+Request delete_request(Request req, char *contents, SSL *ssl) {
+    char dummy[BUFFER_SIZE];
+    int arg_number;
+
+    arg_number = sscanf(contents, "%s %s %s %s", req.table_name, req.field_name,
+        req.field_value, dummy);
+    req = check_args(req, arg_number, ssl);
+    return req;
+}
+
+Request update_request(Request req, char *contents, SSL *ssl) {
+    char  dummy[BUFFER_SIZE];
+    int arg_number;
+
+    arg_number = sscanf(contents, "%s %s %s %s %s %s", req.table_name, req.set_field,
+        req.set_value, req.where_field, req.where_value, dummy);
+    req = check_args(req, arg_number, ssl);
+    return req;
+}
+
 /**
  * @brief - This function reads a message from  an SSL object and returns the
  *         number of bytes read
