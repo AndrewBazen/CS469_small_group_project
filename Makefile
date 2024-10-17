@@ -21,6 +21,12 @@ REPOSITORY_OBJS := $(patsubst $(REPOSITORY_PATH)/%.c, $(REPOSITORY_PATH)/%.o, $(
 
 all: server repl
 
+utilities.o: utilities.c
+	$(CC) $(INCLUDES) -c utilities.c
+
+request.o: request.c
+	$(CC) $(INCLUDES) -c request.c
+
 # Compile each .c file in the repository directory to a .o file
 $(REPOSITORY_PATH)/%.o: $(REPOSITORY_PATH)/%.c
 	$(CC) $(INCLUDES) -c $< -o $@
@@ -34,17 +40,11 @@ repl: repl.o connector.o
 repl.o: repl.c
 	$(CC) $(INCLUDES) -c repl.c
 
-utilities.o: utilities.c
-	$(CC) $(INCLUDES) -c utilities.c
-
 server: server.o connector.o utilities.o request.o $(REPOSITORY_OBJS)
 	$(CC) -o server server.o connector.o utilities.o request.o $(REPOSITORY_OBJS) $(LIBS) $(LDFLAGS)
 
 server.o: server.c
 	$(CC) $(INCLUDES) -c server.c
-
-request.o: request.c
-	$(CC) $(INCLUDES) -c request.c
 
 clean: 
 	rm -f server server.o connector.o repl repl.o utilities.o request.o $(REPOSITORY_OBJS)
