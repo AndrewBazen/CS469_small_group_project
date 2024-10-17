@@ -18,6 +18,7 @@
  * @return struct Request - the request struct
  */
 Request* process_request(Request *req, char *message, SSL *ssl) {
+    printf("Server: Processing request from client (%s)\n", message);
     const char *operations[] = {"get", "insert", "select", "delete", "update", "seed-database", "exit"};
     const int num_operations = sizeof(operations) / sizeof(operations[0]);
     char    contents[CONTENT_SIZE],
@@ -25,63 +26,82 @@ Request* process_request(Request *req, char *message, SSL *ssl) {
             dummy[BUFFER_SIZE],
             exit_buffer[BUFFER_SIZE];
     int arg_number;
+    int offset = 0;
     bool valid_request = false;
+    Request *temp_req = req;
+    Request *new_req = malloc(sizeof(Request));
 
-    sscanf(message, "%s %s", req->operation, contents);
+    sscanf(message, "%s %n", temp_req->operation, &offset);
+
+    printf("operation: %s\n", temp_req->operation);
+
+    strncpy(contents, message + offset, CONTENT_SIZE - 1);
+    contents[CONTENT_SIZE - 1] = '\0';
+
+    printf("contents: %s\n", contents);
 
     // first check if the operation is valid
     for (int i = 0; i < num_operations; i++) {
-        if (strcmp(req->operation, operations[i]) == 0) {
+        if (strcmp(temp_req->operation, operations[i]) == 0) {
             valid_request = true;
+            printf("Server: Valid Request\n");
             break;
         }
     }
     
     // if the operation is not valid, send an error code to the client
     if (!valid_request) {
+        printf("Server: Invalid Request\n");
         sprintf(error_buffer, "error_id-%d: Invalid Request", 3);
         write_to_ssl(ssl, error_buffer, strlen(error_buffer), "Server");
-        req->operation[0] = '\0';
+        temp_req->operation[0] = '\0';
+        req = temp_req;
         return req;
     }
 
 	// if the operation is download and the file does not exist, send an error code
     // to the client
-    if (strcmp(req->operation, "exit") == 0) {
+    if (strcmp(temp_req->operation, "exit") == 0) {
         sprintf(exit_buffer, "Disconnecting\n");
         write_to_ssl(ssl, exit_buffer, strlen(exit_buffer), "Server");
+        req = temp_req;
         return req;
     } else {
-        if (strcmp(req->operation, "seed-database") == 0) {
+        if (strcmp(temp_req->operation, "seed-database") == 0) {
             seed_database();
+            req = temp_req;
+            return req;
         }
+
         //get
-        if (strcmp(req->operation, "get") == 0) {
-            req = get_request(req, contents, ssl);
+        if (strcmp(temp_req->operation, "get") == 0) {
+            req = get_request(temp_req, contents, ssl);
+            
         }
         
         //select
-        if (strcmp(req->operation, "select") == 0) {
-            req = select_request(req, contents, ssl);
+        if (strcmp(temp_req->operation, "select") == 0) {
+            new_req = select_request(temp_req, contents, ssl);
         }
 
         //insert
-        if (strcmp(req->operation, "insert") == 0) {
-            req = insert_request(req, contents, ssl);
+        if (strcmp(temp_req->operation, "insert") == 0) {
+            new_req = insert_request(temp_req, contents, ssl);
         }
 
         //delete
-        if (strcmp(req->operation, "delete") == 0) {
-            req = delete_request(req, contents, ssl);
+        if (strcmp(temp_req->operation, "delete") == 0) {
+            new_req = delete_request(temp_req, contents, ssl);
         }
 
         //update
-        if (strcmp(req->operation, "update") == 0) {
-            req = update_request(req, contents, ssl);
+        if (strcmp(temp_req->operation, "update") == 0) {
+            new_req = update_request(temp_req, contents, ssl);
         }
     }
 
     // if the operation is valid and the number of arguments is correct, return
     // the request with updated values
+    printf("Server: Request processed\n");
     return req;
 }

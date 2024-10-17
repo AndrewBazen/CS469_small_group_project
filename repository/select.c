@@ -55,7 +55,7 @@ result* select_all(MYSQL *db, char *db_name, char *table_name) {
   col_result_curr = col_result_head;
   while (col_result_curr != NULL) {
     if ((i % col_result_head->num_rows) == 2) {
-      types[j] = convert_type(*col_result_curr->buffer);
+      types[j] = convert_type(col_result_curr->buffer);
       j++;
     }
     i++;
