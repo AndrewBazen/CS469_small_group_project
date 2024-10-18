@@ -168,10 +168,12 @@ MYSQL* connect_to_db() {
 result* query_database(SSL *ssl, MYSQL *db, Request *req, result *res) {
 	printf("Server: Querying database\n");
 	
-	if (strcmp(req->operation, "tables") == 0) {
-		res = get_table_names(db, req->db_name);
-	} else if (strcmp(req->operation, "columns") == 0) {
-		res = get_columns(db, req->db_name, req->table_name);
+	if (strcmp(req->operation, "get") == 0) {
+		if (strcmp(req->type, "tables") == 0) {
+			res = get_table_names(db, req->db_name);
+		} else if (strcmp(req->type, "columns") == 0) {
+			res = get_columns(db, req->db_name, req->table_name);
+		}
 	} else if (strcmp(req->operation, "insert") == 0) {
 		res = insert(db, req->db_name, req->table_name, (char **)req->values);
 	} else if (strcmp(req->operation, "select") == 0) {
@@ -225,8 +227,6 @@ void handle_request(SSL *ssl, MYSQL *db) {
 			write_to_ssl(ssl, response, sizeof(response), "Server");
 		} else if (req->operation[0] != '\0') {
 			printf("Server: Handling request with database\n");
-        	sprintf(response, "Server: Handling request with database\n");
-			write_to_ssl(ssl, response, sizeof(response), "Server");
 			res = query_database(ssl, db, req, res);
 			if (res->buffer[0] != '\0') {
 				printf(" res->buffer: %s\n", res->buffer);
