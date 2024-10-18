@@ -76,7 +76,6 @@ Request* process_request(Request *req, char *message, SSL *ssl) {
         //get
         if (strcmp(temp_req->operation, "get") == 0) {
             req = get_request(temp_req, contents, ssl);
-            
         }
         
         //select

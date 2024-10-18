@@ -8,10 +8,20 @@
 #include "utilities.h"
 
 void seed_database() {
-    const char *command = "docker exec -i mysql /bin/sh ./docker/seed.sh";
+    // Define the command to execute the script
+    const char *create = "docker exec -i mysql chmod +x /Docker/seed.sh";
+    const char *seed = "docker exec -i mysql /Docker/seed.sh";
+    
     
     // Execute the command
-    int result = system(command);
+    int result = system(create);
+    if (result == -1) {
+        perror("Error changing permissions on MySQL container");
+    } else {
+        printf("Permissions changed successfully on MySQL container\n");
+    }
+
+    result = system(seed);
     
     if (result == -1) {
         perror("Error executing script on MySQL container");
@@ -104,8 +114,9 @@ Request* get_request(Request *req, char *contents, SSL *ssl) {
 
         req = check_args(req, arg_number, ssl);
     } else if (strcmp(req->type, "columns") == 0) {
-        arg_number = sscanf(contents, "%s %s %s", req->db_name, req->table_name, dummy);
-
+        arg_number = sscanf(arguments, "%s %s %s", req->db_name, req->table_name, dummy);
+        printf("Columns request: db_name: %s, table_name: %s\n", req->db_name, req->table_name);
+        
         req = check_args(req, arg_number, ssl);
     }
     return req;

@@ -36,7 +36,7 @@
 #include <pthread.h>
 #include <fcntl.h>
 
-#define MAX_QUERY_SIZE 1024
+#define RESULT_BUFFER 1024
 #define BUFFER_SIZE 256
 #define PORT 8443
 #define CERTIFICATE_FILE  "cert.pem"
@@ -188,49 +188,135 @@ result* query_database(SSL *ssl, MYSQL *db, Request *req, result *res) {
 }
 
 /**
+ * @brief Process the result
+ * 
+ * @param res the result
+ */
+void process_result(MYSQL *db, Request *req, result *res, char *buffer) {
+	char *buffer_ptr = buffer;
+	result *column_res;
+	int num_cols = res->num_rows;
+	int i = 0;
+
+	// Check if the query was a get request
+	if (strcmp(req->operation, "get") == 0) {
+		// Display tables
+		if (strcmp(req->type, "tables") == 0) {
+			buffer_ptr += sprintf(buffer_ptr, "Total number of results: %d\n", res->num_results);
+			buffer_ptr += sprintf(buffer_ptr, "Tables:"
+										  "\n+-----------------+\n");
+
+			while (res != NULL) {
+				buffer_ptr += sprintf(buffer_ptr, "| %-15s |\n", *res->buffer);
+				res = res->next;
+			}
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------+\n");
+
+		// Display columns
+		} else if (strcmp(req->type, "columns") == 0) {
+			printf("Server: Displaying columns\n");
+			buffer_ptr += sprintf(buffer_ptr, "Total number of results: %d\n", res->num_results);
+			buffer_ptr += sprintf(buffer_ptr, "Table: %s"
+								  "\n+-----------------", req->table_name);
+			printf("res->num_results: %d\n", res->num_results);
+			for (int i = 0; i < num_cols - 1; i++) {
+				buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+			}
+			buffer_ptr += sprintf(buffer_ptr, "+\n|");
+
+			while (res != NULL) {
+				if (i % (num_cols + 1) == 0) {
+					printf("res->buffer: %s\n", *res->buffer);
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |", *res->buffer);
+				}
+				res = res->next;
+				i++;
+			}
+			buffer_ptr += sprintf(buffer_ptr,"\n+-----------------");
+			for (int i = 0; i < num_cols - 1; i++) {
+				buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+			}
+			buffer_ptr += sprintf(buffer_ptr, "+\n");
+		}
+	} else if (strcmp(req->operation, "insert") == 0) {
+		buffer_ptr += sprintf(buffer_ptr, "Total number of results: %d\n", res->num_results);
+		buffer_ptr += sprintf(buffer_ptr, "Columns:\n"
+										  "+-------------------------------\n");
+		while (res != NULL) {
+			if (res->end_of_row) {
+				buffer_ptr += sprintf(buffer_ptr, "| %-15s |\n", *res->buffer);
+				res = res->next;	
+			} else {
+				buffer_ptr += sprintf(buffer_ptr, "| %-15s ", *res->buffer);
+				res = res->next;
+			}
+		}
+	} //else if (strcmp(req->operation, "select") == 0) {
+	// 	if (res->end_of_row) {
+	// 		sprintf(buffer, "\n");
+	// 	} else {
+	// 		sprintf(buffer, "%s ", *res->buffer);
+	// 	}
+	// } else if (strcmp(req->operation, "delete") == 0) {
+	// 	sprintf(buffer, "%s ", *res->buffer);
+	// } else if (strcmp(req->operation, "update") == 0) {
+	// 	sprintf(buffer, "%s ", *res->buffer);
+	// }
+	// if (res->end_of_row) {
+	// 	sprintf(buffer, "\n");
+	// } else {
+	// 	sprintf(buffer, "%s ", *res->buffer);
+	// }
+	printf("Server: Result processed\n");
+	buffer = buffer_ptr;
+}
+
+/**
  * @brief Handle the request from the client
  * 
  * @param ssl the SSL object
- * @param user the username
- * @param password the password
- * @param database the database
+ * @param db the database
  */
 void handle_request(SSL *ssl, MYSQL *db) {
-	char buffer[BUFFER_SIZE];
-	char response[BUFFER_SIZE];
+	char buffer[BUFFER_SIZE],
+		 response[BUFFER_SIZE],
+		 res_buffer[RESULT_BUFFER];
 	Request *req = malloc(sizeof(Request));
 	result *res = malloc(sizeof(result));
 	int nbytes_read;
 	bool exit = false;
 
+	// Loop to handle multiple requests from the client
 	while(!server_shutdown && !exit) {
-		// Read the HTTP GET message from the client
-		// and send the HTTP response
+		// Read the request from the client
 		bzero(buffer, BUFFER_SIZE);
 		nbytes_read = read_from_ssl(ssl, buffer, BUFFER_SIZE, "Server");
 		if (nbytes_read < 0) {
 			fprintf(stderr, "Server: Unable to read from socket: %s\n", strerror(errno));
 			return;
 		}
-
+		// Process the request
 		req = process_request(req, buffer, ssl);
 		if (!req) {
             fprintf(stderr, "Server: Failed to process request\n");
         }
-
-		printf("req->operation: %s\n", req->operation);
 		
+		// exit if the client sends an exit message
 		if (strcmp(req->operation, "exit") == 0) {
 			exit = true;
+		// seed the database if the client sends a seed-database message
 	  	} else if (strcmp(req->operation, "seed-database") == 0) {
 			sprintf(response, "Server: Database seeded\n");
 			write_to_ssl(ssl, response, sizeof(response), "Server");
+		// query the database if the client sends a valid request
 		} else if (req->operation[0] != '\0') {
 			printf("Server: Handling request with database\n");
 			res = query_database(ssl, db, req, res);
-			if (res->buffer[0] != '\0') {
-				printf(" res->buffer: %s\n", res->buffer);
-                write_to_ssl(ssl, res->buffer, strlen(res->buffer), "Server");
+			// process the result and send it to the client
+			if (res != NULL) {
+				process_result(db, req, res, res_buffer);
+				printf("%s\n", res_buffer);
+				write_to_ssl(ssl, res_buffer, strlen(res_buffer), "Server");
             } else {
 				printf("Server: Query failed\n");
                 sprintf(response, "Server: Query failed\n");
