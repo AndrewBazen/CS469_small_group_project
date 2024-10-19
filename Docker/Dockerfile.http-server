@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y \
     make \
     gcc \
     libmariadb-dev \
-    libmariadb-dev-compat \
+    libmariadb-dev-compat \    
     openssl \
     libssl-dev \
     libmicrohttpd-dev \
@@ -19,7 +19,8 @@ WORKDIR /usr/src/app
 # Make the script executable
 RUN chmod +x /usr/src/app/Docker/generate-server-ssl.sh
 
-RUN /usr/src/app/Docker/generate-server-ssl.sh
+# Generate the SSL certificates and exit if it fails
+RUN /usr/src/app/Docker/generate-server-ssl.sh 
 
 # Clean the directory
 RUN make clean
