@@ -90,7 +90,8 @@ result* insert(MYSQL *db, char *db_name, char *table_name, char *cols[], char *v
 int get_values_length(char *values[]) {
   int i = 0;
 
-  while (values[i + 1] != NULL) {
+  while (values[i] != NULL) {
+    printf("Value %d: %s\n", i, values[i]);
     i++;
   }
 

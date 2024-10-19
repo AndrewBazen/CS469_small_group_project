@@ -33,9 +33,6 @@ void seed_database() {
 Request* check_args(Request *req, int arg_number, SSL *ssl) {
     char error_buffer[BUFFER_SIZE];
 
-    printf("Checking arguments\n");
-    printf("Operation: %s\n", req->operation);
-
     if (strcmp(req->operation, "insert") == 0) {
         if (arg_number < 3) {
             sprintf(error_buffer, "error_id-%d: too few arguments", 1);
@@ -105,66 +102,56 @@ Request* get_request(Request *req, char *contents, SSL *ssl) {
 
     strncpy(arguments, contents + offset, BUFFER_SIZE - 1);
     arguments[BUFFER_SIZE - 1] = '\0';
-    printf("Arguments: %s\n", arguments);
-    printf("Type: %s\n", req->type);
 
     if (strcmp(req->type, "tables") == 0) {
         arg_number = sscanf(arguments, "%s %s", req->db_name, dummy);
-        printf("Tables request: db_name: %s\n", req->db_name);
 
         req = check_args(req, arg_number, ssl);
     } else if (strcmp(req->type, "columns") == 0) {
         arg_number = sscanf(arguments, "%s %s %s", req->db_name, req->table_name, dummy);
-        printf("Columns request: db_name: %s, table_name: %s\n", req->db_name, req->table_name);
-        
+
         req = check_args(req, arg_number, ssl);
     }
     return req;
 }
 
 Request* insert_request(Request *req, char *contents, SSL *ssl) {
-    char    arguments[BUFFER_SIZE],
-            dummy[BUFFER_SIZE];
-    char*   value;
+    char    dummy[BUFFER_SIZE],
+            arguments[BUFFER_SIZE];
+    char*   value = NULL;
     int arg_number;
     int value_number = 0;
     bool parsing_complete = false;
 
+    arg_number = sscanf(contents, "%s %s %s %s", req->db_name, req->table_name, arguments, dummy);
 
-    arg_number = sscanf(contents, "%s %s %s", req->db_name, req->table_name, arguments);
-    arg_number = arg_number - 1;
+    value = strtok(arguments, ",");
+    while (value != NULL) {
+        req->values[value_number] = strdup(value);
+        printf("Value %d: %s\n", value_number, req->values[value_number]);
+        value = strtok(NULL, ",");
+        value_number++;
+    }
+    
 
     //parse the values in contents
     // for each value in contents
-    while (!parsing_complete) {
-        if (value_number >= VALUES_SIZE) {
-            arg_number = 4;
-            break;
-        }
-        if (value_number == 0) {
-            char *value = strtok(arguments, ",");
-        } else {
-            char *value = strtok(NULL, ",");
-        }
-        if (value == NULL) {
-            parsing_complete = true;
-        } else {
-            // for each character in value
-            for (int j = 0; j < strlen(value); j++) {
-                // check if the value is a quotation mark
-                if (value[j] == '"') {
-                    // if it is, skip the quotation mark
-                    j++;
-                }
-                //append the character to the current value
-                req->values[value_number][j] = value[j];
-            }
-            value_number++;
-        }
-        req = check_args(req, arg_number, ssl);
-    }
+    // while (!parsing_complete) {
+    //     if (value_number == 0) {
+    //         value = strtok(arguments, ",");
+    //         req->values[value_number] = value;
+    //     } else if (value == NULL) {
+    //         parsing_complete = true;
+    //     } else {
+    //         req->values[value_number] = value;
+    //         value = strtok(NULL, ",");
+    //     }
+    //     printf("value: %s\n", value);  
+    //     printf("Value: %s\n", req->values[value_number]);
+    //     value_number++;
+    // }
+    req = check_args(req, arg_number, ssl);
     return req;
-
 }
 
 Request* select_request(Request *req, char *contents, SSL *ssl) {

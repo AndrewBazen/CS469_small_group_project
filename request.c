@@ -80,22 +80,22 @@ Request* process_request(Request *req, char *message, SSL *ssl) {
         
         //select
         if (strcmp(temp_req->operation, "select") == 0) {
-            new_req = select_request(temp_req, contents, ssl);
+            req = select_request(temp_req, contents, ssl);
         }
 
         //insert
         if (strcmp(temp_req->operation, "insert") == 0) {
-            new_req = insert_request(temp_req, contents, ssl);
+            req = insert_request(temp_req, contents, ssl);
         }
 
         //delete
         if (strcmp(temp_req->operation, "delete") == 0) {
-            new_req = delete_request(temp_req, contents, ssl);
+            req = delete_request(temp_req, contents, ssl);
         }
 
         //update
         if (strcmp(temp_req->operation, "update") == 0) {
-            new_req = update_request(temp_req, contents, ssl);
+            req = update_request(temp_req, contents, ssl);
         }
     }
 
