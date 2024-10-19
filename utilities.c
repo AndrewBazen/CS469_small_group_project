@@ -34,9 +34,9 @@ Request* check_args(Request *req, int arg_number, SSL *ssl) {
     char error_buffer[BUFFER_SIZE];
 
     if (strcmp(req->operation, "insert") == 0) {
-        if (arg_number < 3) {
+        if (arg_number < 4) {
             sprintf(error_buffer, "error_id-%d: too few arguments", 1);
-        } else if (arg_number > 3) {
+        } else if (arg_number > 4) {
             sprintf(error_buffer, "error_id-%d: too many arguments", 2);
         } else {
             return req;
@@ -117,13 +117,14 @@ Request* get_request(Request *req, char *contents, SSL *ssl) {
 
 Request* insert_request(Request *req, char *contents, SSL *ssl) {
     char    dummy[BUFFER_SIZE],
-            arguments[BUFFER_SIZE];
+            arguments[BUFFER_SIZE],
+            columns[BUFFER_SIZE];
     char*   value = NULL;
     int arg_number;
     int value_number = 0;
     bool parsing_complete = false;
 
-    arg_number = sscanf(contents, "%s %s %s %s", req->db_name, req->table_name, arguments, dummy);
+    arg_number = sscanf(contents, "%s %s %s %s %s", req->db_name, req->table_name, columns, arguments, dummy);
 
     value = strtok(arguments, ",");
     while (value != NULL) {
@@ -132,24 +133,15 @@ Request* insert_request(Request *req, char *contents, SSL *ssl) {
         value = strtok(NULL, ",");
         value_number++;
     }
-    
 
-    //parse the values in contents
-    // for each value in contents
-    // while (!parsing_complete) {
-    //     if (value_number == 0) {
-    //         value = strtok(arguments, ",");
-    //         req->values[value_number] = value;
-    //     } else if (value == NULL) {
-    //         parsing_complete = true;
-    //     } else {
-    //         req->values[value_number] = value;
-    //         value = strtok(NULL, ",");
-    //     }
-    //     printf("value: %s\n", value);  
-    //     printf("Value: %s\n", req->values[value_number]);
-    //     value_number++;
-    // }
+    value = strtok(columns, ",");
+    value_number = 0;
+    while (value != NULL) {
+        req->cols[value_number] = strdup(value);
+        printf("Column %d: %s\n", value_number, req->cols[value_number]);
+        value = strtok(NULL, ",");
+        value_number++;
+    }
     req = check_args(req, arg_number, ssl);
     return req;
 }

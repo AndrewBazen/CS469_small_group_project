@@ -17,7 +17,10 @@ mysql \
   --password=$MYSQL_PASSWORD \
   -e "
 -- select the database
-USE $MYSQL_DATABASE;
+DROP DATABASE my_database;
+CREATE DATABASE my_database;
+USE my_database;
+
 
 -- create the tables
 CREATE TABLE IF NOT EXISTS student (

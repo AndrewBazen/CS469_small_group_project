@@ -175,7 +175,7 @@ result* query_database(SSL *ssl, MYSQL *db, Request *req, result *res) {
 			res = get_columns(db, req->db_name, req->table_name);
 		}
 	} else if (strcmp(req->operation, "insert") == 0) {
-		res = insert(db, req->db_name, req->table_name, req->values);
+		res = insert(db, req->db_name, req->table_name, req->cols, req->values);
 	} else if (strcmp(req->operation, "select") == 0) {
 		res = select_all(db, req->db_name, req->table_name);
 	} else if (strcmp(req->operation, "delete") == 0) {
@@ -258,8 +258,8 @@ void process_result(MYSQL *db, Request *req, result *res, char *buffer) {
 		}
 	// Check if the query was an insert request
 	} else if (strcmp(req->operation, "insert") == 0) {
-		column_res = get_columns(db, req->db_name, req->table_name);
 		row_res = select_all(db, req->db_name, req->table_name);
+		column_res = get_columns(db, req->db_name, req->table_name);
 		num_cols = column_res->num_rows;
 		updated_num_rows = row_res->num_rows;
 
@@ -284,9 +284,146 @@ void process_result(MYSQL *db, Request *req, result *res, char *buffer) {
 		
 		// add the column names
 		i = 0;
+		while (i < num_cols) {
+			printf("i: %d\n", i);
+			printf("res->buffer: %s\n",req->cols[i]);
+			buffer_ptr += sprintf(buffer_ptr, " %-15s |", req->cols[i]);
+			i++;
+		}
+
+		// add the bottom of the column headers
+		buffer_ptr += sprintf(buffer_ptr,"\n+-----------------");
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+		}
+		buffer_ptr += sprintf(buffer_ptr, "+\n");
+
+		//add the rows
+		while (row_res != NULL) {
+			i = 0;
+			buffer_ptr += sprintf(buffer_ptr, "|");
+			while (i < num_cols) {
+				if (row_res->end_of_row) {
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |\n", *row_res->buffer);
+					row_res = row_res->next;	
+				} else {
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |", *row_res->buffer);
+					row_res = row_res->next;
+				}
+				i++;
+			}
+		}
+		// add the bottom of the table
+		buffer_ptr += sprintf(buffer_ptr,"+-----------------");
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+		}
+		buffer_ptr += sprintf(buffer_ptr, "+\n");
+
+		// select all rows from the table
+	 } else if (strcmp(req->operation, "select") == 0) {
+		column_res = get_columns(db, req->db_name, req->table_name);	
+		num_cols = column_res->num_rows;
+
+		if (column_res == NULL) {
+			printf("Server: Error getting columns\n");
+			return;
+		}
+
+		printf("Server: Selecting\n");
+		buffer_ptr += sprintf(buffer_ptr, "Total number of results: %d\n", res->num_rows);
+		buffer_ptr += sprintf(buffer_ptr, "Table: %s"
+				"\n+-----------------", req->table_name);
+		// add the top of the table
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+		}
+		buffer_ptr += sprintf(buffer_ptr, "+\n|");
+		
+		// add the column names
+		i = 0;
 		if (num_cols % 2 == 0) {
 			while (column_res != NULL) {
 				if (i % (num_cols + 2) == 0) {
+					printf("i: %d\n", i);
+					printf("res->buffer: %s\n", *column_res->buffer);
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |", *column_res->buffer);
+				}
+				column_res = column_res->next;
+				i++;
+			}
+		} else {
+			while (column_res != NULL) {
+				if (i % (num_cols + 1) == 0) {
+					printf("res->buffer: %s\n", *column_res->buffer);
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |", *column_res->buffer);
+				}
+				column_res = column_res->next;
+				i++;
+			}
+		}	
+
+		// add the bottom of the column headers
+		buffer_ptr += sprintf(buffer_ptr,"\n+-----------------");
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+		}
+		buffer_ptr += sprintf(buffer_ptr, "+\n");
+
+		//add the rows
+		while (res != NULL) {
+			i = 0;
+			buffer_ptr += sprintf(buffer_ptr, "|");
+			while (i < num_cols) {
+				if (res->end_of_row) {
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |\n", *res->buffer);
+					res = res->next;	
+				} else {
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |", *res->buffer);
+					res = res->next;
+				}
+				i++;
+			}
+		}
+		// add the bottom of the table
+		buffer_ptr += sprintf(buffer_ptr,"+-----------------");
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+		}
+		buffer_ptr += sprintf(buffer_ptr, "+\n");
+
+		// Check if the query was a delete request
+	} else if (strcmp(req->operation, "delete") == 0) {
+		row_res = select_all(db, getenv("MYSQL_DATABASE"), req->table_name);
+		column_res = get_columns(db, getenv("MYSQL_DATABASE"), req->table_name);
+		num_cols = column_res->num_rows;
+		updated_num_rows = row_res->num_rows;
+
+		if (column_res == NULL) {
+			printf("Server: Error getting columns\n");
+			return;
+		}
+		if (row_res == NULL) {
+			printf("Server: Error getting rows\n");
+			return;
+		}
+
+		printf("Server: Deleting\n");
+		buffer_ptr += sprintf(buffer_ptr, "Total number of results: %d\n", row_res->num_rows);
+		buffer_ptr += sprintf(buffer_ptr, "Table: %s"
+				"\n+-----------------", req->table_name);
+		// add the top of the table
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+		}
+		buffer_ptr += sprintf(buffer_ptr, "+\n|");
+		
+		// add the column names
+		i = 0;
+		if (num_cols % 2 == 0) {
+			while (column_res != NULL) {
+				if (i % (num_cols + 2) == 0) {
+					printf("i: %d\n", i);
 					printf("res->buffer: %s\n", *column_res->buffer);
 					buffer_ptr += sprintf(buffer_ptr, " %-15s |", *column_res->buffer);
 				}
@@ -302,7 +439,7 @@ void process_result(MYSQL *db, Request *req, result *res, char *buffer) {
 			column_res = column_res->next;
 			i++;
 			}
-		}
+		}	
 
 		// add the bottom of the column headers
 		buffer_ptr += sprintf(buffer_ptr,"\n+-----------------");
@@ -315,7 +452,7 @@ void process_result(MYSQL *db, Request *req, result *res, char *buffer) {
 		while (row_res != NULL) {
 			i = 0;
 			buffer_ptr += sprintf(buffer_ptr, "|");
-			while (i < updated_num_rows) {
+			while (i < num_cols) {
 				if (row_res->end_of_row) {
 					buffer_ptr += sprintf(buffer_ptr, " %-15s |\n", *row_res->buffer);
 					row_res = row_res->next;	
@@ -325,37 +462,92 @@ void process_result(MYSQL *db, Request *req, result *res, char *buffer) {
 				}
 				i++;
 			}
-			buffer_ptr += sprintf(buffer_ptr, "\n");
+		}
+		// add the bottom of the table
+		buffer_ptr += sprintf(buffer_ptr,"+-----------------");
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+		}
+		buffer_ptr += sprintf(buffer_ptr, "+\n");
+
+		
+	} else if (strcmp(req->operation, "update") == 0) {
+		row_res = select_all(db, req->db_name, req->table_name);
+		column_res = get_columns(db, req->db_name, req->table_name);
+		num_cols = column_res->num_rows;
+		updated_num_rows = row_res->num_rows;
+
+		if (column_res == NULL) {
+			printf("Server: Error getting columns\n");
+			return;
+		}
+		if (row_res == NULL) {
+			printf("Server: Error getting rows\n");
+			return;
 		}
 
-		// add the bottom of the table
+		printf("Server: Updating\n");
+		buffer_ptr += sprintf(buffer_ptr, "Total number of results: %d\n", row_res->num_rows);
+		buffer_ptr += sprintf(buffer_ptr, "Table: %s"
+				"\n+-----------------", req->table_name);
+		// add the top of the table
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+		}
+		buffer_ptr += sprintf(buffer_ptr, "+\n|");
+		
+		// add the column names
+		i = 0;
+		if (num_cols % 2 == 0) {
+			while (column_res != NULL) {
+				if (i % (num_cols + 2) == 0) {
+					printf("i: %d\n", i);
+					printf("res->buffer: %s\n", *column_res->buffer);
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |", *column_res->buffer);
+				}
+			column_res = column_res->next;
+			i++;
+			}
+		} else {
+			while (column_res != NULL) {
+				if (i % (num_cols + 1) == 0) {
+					printf("res->buffer: %s\n", *column_res->buffer);
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |", *column_res->buffer);
+				}
+			column_res = column_res->next;
+			i++;
+			}
+		}	
+
+		// add the bottom of the column headers
 		buffer_ptr += sprintf(buffer_ptr,"\n+-----------------");
 		for (int i = 0; i < num_cols - 1; i++) {
 			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
 		}
 		buffer_ptr += sprintf(buffer_ptr, "+\n");
-		if (column_res != NULL) {
-		free_results(column_res);
+
+		//add the rows
+		while (row_res != NULL) {
+			i = 0;
+			buffer_ptr += sprintf(buffer_ptr, "|");
+			while (i < num_cols) {
+				if (row_res->end_of_row) {
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |\n", *row_res->buffer);
+					row_res = row_res->next;	
+				} else {
+					buffer_ptr += sprintf(buffer_ptr, " %-15s |", *row_res->buffer);
+					row_res = row_res->next;
+				}
+				i++;
+			}
 		}
-		if (row_res != NULL) {
-			free_results(row_res);
+		// add the bottom of the table
+		buffer_ptr += sprintf(buffer_ptr,"+-----------------");
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
 		}
-	} //else if (strcmp(req->operation, "select") == 0) {
-	// 	if (res->end_of_row) {
-	// 		sprintf(buffer, "\n");
-	// 	} else {
-	// 		sprintf(buffer, "%s ", *res->buffer);
-	// 	}
-	// } else if (strcmp(req->operation, "delete") == 0) {
-	// 	sprintf(buffer, "%s ", *res->buffer);
-	// } else if (strcmp(req->operation, "update") == 0) {
-	// 	sprintf(buffer, "%s ", *res->buffer);
-	// }
-	// if (res->end_of_row) {
-	// 	sprintf(buffer, "\n");
-	// } else {
-	// 	sprintf(buffer, "%s ", *res->buffer);
-	// }
+		buffer_ptr += sprintf(buffer_ptr, "+\n");
+	}
 	printf("Server: Result processed\n");
 	buffer = buffer_ptr;
 }
@@ -393,10 +585,6 @@ void handle_request(SSL *ssl, MYSQL *db) {
 		// exit if the client sends an exit message
 		if (strcmp(req->operation, "exit") == 0) {
 			exit = true;
-		// seed the database if the client sends a seed-database message
-	  	} else if (strcmp(req->operation, "seed-database") == 0) {
-			sprintf(response, "Server: Database seeded\n");
-			write_to_ssl(ssl, response, sizeof(response), "Server");
 		// query the database if the client sends a valid request
 		} else if (req->operation[0] != '\0') {
 			printf("Server: Handling request with database\n");
