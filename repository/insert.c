@@ -10,13 +10,11 @@
 
 int get_values_length(char *values[]);
 
-result* insert(MYSQL *db, char *db_name, char *table_name, char *values[]) {
+result* insert(MYSQL *db, char *db_name, char *table_name, char *cols[], char *values[]) {
   int           values_length = get_values_length(values);
 
   MYSQL_BIND    bind[values_length];
   MYSQL_STMT    *stmt;
-  result        *col_result_head;
-  result        *col_result_curr;
   result        *res = NULL;
   char          placeholders[REPO_BUFFER_SIZE / 2] = "";
   char          param[REPO_BUFFER_SIZE / 2] = "";
@@ -24,34 +22,17 @@ result* insert(MYSQL *db, char *db_name, char *table_name, char *values[]) {
   int           affected_rows;
   int           i;
 
-  // get columns in order to format the query
-  col_result_head = get_columns(db, db_name, table_name);
-  if (col_result_head == NULL) {
-    fprintf(stderr, "MySQL query failed: Could not get the columns\n");
-    return NULL;
-  }
-
   i = 0;
-  col_result_curr = col_result_head;
 
   // append the parameters and placeholders, add a comma if not last
-  while (col_result_curr != NULL) {
-    if ((i % (col_result_head->num_rows + 1)) == 0) {
-      strcat(param, *col_result_curr->buffer);
-      strcat(placeholders, "?");
-      if (col_result_head->num_rows < col_result_head->num_results - i - 1) {
-        strcat(param, ",");
-        strcat(placeholders, ",");
-      }
+  while (i < values_length) {
+    strcat(param, cols[i]);
+    strcat(placeholders, "?");
+    if (i < values_length - 1) {
+      strcat(param, ",");
+      strcat(placeholders, ",");
     }
-    col_result_curr = col_result_curr->next;
     i++;
-  }
-
-  // validate the columns and values are of same length
-  if (values_length != col_result_head->num_rows) {
-    fprintf(stderr, "Database Error: Number of values (%d) mismatch number of columns (%d)\n", values_length, col_result_head->num_rows);
-    return NULL;
   }
 
   // format the query
