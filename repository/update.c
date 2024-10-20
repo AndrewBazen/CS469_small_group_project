@@ -21,7 +21,6 @@ result* update(MYSQL *db, char *table_name, char *set_field, char *set_value, ch
   // create prepared statement
   stmt = create_prepared_statement(db, query);
   if (stmt == NULL) {
-    fprintf(stderr, "Database Error: Cannot create statement: %s\n", mysql_stmt_error(stmt));
     return NULL;
   }
   
