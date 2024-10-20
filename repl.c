@@ -13,7 +13,7 @@
 
 #define CERTIFICATE_FILE "cert.pem"
 #define KEY_FILE "key.pem"
-
+#define DEFAULT_PORT 8443
 #define MAX_INPUT_SIZE 256
 
 SSL_CTX * ctx;
@@ -24,7 +24,7 @@ void send_request(const char * input); //forward decl to resolve warnings
 void close_connection();
 void help_command();
 
-void repl() {
+void repl(int port) {
   char input[MAX_INPUT_SIZE];
   int complete = 0;
 
@@ -75,7 +75,7 @@ void send_request(const char * input) {
   }
 }
 
-int init_connection() {
+int init_connection(int port) {
   struct sockaddr_in address;
 
   server_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -86,7 +86,7 @@ int init_connection() {
 
   address.sin_family = AF_INET;
   //same port as server
-  address.sin_port = htons(8443);
+  address.sin_port = htons(port);
 
   if (inet_pton(AF_INET, "127.0.0.1", & address.sin_addr) <= 0) {
     printf("Invalid address\n");
@@ -128,11 +128,12 @@ void help_command() {
 }
 
 int main(int argc, char ** argv, char ** envp) {
+  int port = DEFAULT_PORT;
   //start conection at the beginning of main
-  if (init_connection() != 0) {
+  if (init_connection(port) != 0) {
     return EXIT_FAILURE;
   }
   //start repl
-  repl();
+  repl(port);
   return EXIT_SUCCESS;
 }

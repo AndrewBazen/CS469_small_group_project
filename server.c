@@ -39,6 +39,7 @@
 #define RESULT_BUFFER 1024
 #define BUFFER_SIZE 256
 #define PORT 8443
+#define MAX_PORT 8446
 #define CERTIFICATE_FILE  "cert.pem"
 #define KEY_FILE          "key.pem"
 
@@ -70,7 +71,11 @@ int create_socket(unsigned int port) {
 
 	if (bind(s, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
 		fprintf(stderr, "Server: Unable to bind Socket: %s\n", strerror(errno));
-		exit(EXIT_FAILURE);
+		if (port > MAX_PORT) {
+			exit(EXIT_FAILURE);
+		} else {
+			return create_socket(port + 1);
+		}
 	}
 
 	if (listen(s, 1) < 0) {
@@ -576,6 +581,11 @@ void handle_request(SSL *ssl, MYSQL *db) {
 			fprintf(stderr, "Server: Unable to read from socket: %s\n", strerror(errno));
 			return;
 		}
+		if (nbytes_read == 0) {
+			printf("Server: Empty request\n");
+			return;
+		}
+
 		// Process the request
 		req = process_request(req, buffer, ssl);
 		if (!req) {

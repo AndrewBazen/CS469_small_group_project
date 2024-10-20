@@ -24,7 +24,6 @@ services:
       start_period: 30s
       timeout: 5s
   http-server:
-    container_name: http-server
     build:
       context: .
       dockerfile: ./Docker/Dockerfile.http-server
@@ -40,9 +39,10 @@ services:
       mysql:
         condition: service_healthy
     ports:
-      - "8443:8443"
+      - "8443-8445:8443"
     networks: 
       - my_network
+    # restart: always
 volumes:
   mysqldb:
 networks:

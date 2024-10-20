@@ -254,7 +254,6 @@ void write_to_ssl(SSL *ssl, char* buffer, int size, char* type) {
         else if (nbytes_written == 0) {
         printf("Server: Client closed connection\n");
         free(ssl);
-        exit(EXIT_FAILURE);
         }
 
     } else if (strcmp(type, "Client") == 0) {
