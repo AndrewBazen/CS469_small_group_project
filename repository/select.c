@@ -13,6 +13,7 @@ result* select_all(MYSQL *db, char *db_name, char *table_name) {
   MYSQL_ROW     row;
   MYSQL_RES     *res;
   char          query[REPO_BUFFER_SIZE];
+  char          param[REPO_BUFFER_SIZE - 56] = "";
   int           i = 0;
   int           j = 0;
   int           num_rows = 0;
@@ -22,11 +23,19 @@ result* select_all(MYSQL *db, char *db_name, char *table_name) {
   result        *col_result_curr;
 
   col_result_head = get_columns(db, db_name, table_name);
-  if (col_result_head == NULL) {
-    fprintf(stderr, "MySQL query failed: Could not get the columns\n");
-    return NULL;
+  col_result_curr = col_result_head;
+  while (col_result_curr != NULL) {
+    if ((i % (col_result_head->num_rows + 1)) == 0) {
+      strcat(param, *col_result_curr->buffer);
+      strcat(param, ",");
+    }
+    col_result_curr = col_result_curr->next;
+    i++;
   }
-  sprintf(query, SQL_SELECT_ALL_FROM_TABLE, table_name);
+  // drop the last comma
+  param[strlen(param)-1] = '\0';
+
+  sprintf(query, SQL_SELECT_FROM_TABLE, param, table_name);
 
   int  types[col_result_head->num_rows];
   memset(types,  0, sizeof(types));
