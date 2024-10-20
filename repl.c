@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "repository/sql.h"
-#include "connector.h"
 #include <string.h>
 #include <mysql/mysql.h>
 #include <arpa/inet.h>
@@ -27,6 +25,10 @@ void help_command();
 void repl(int port) {
   char input[MAX_INPUT_SIZE];
   int complete = 0;
+
+  printf("Welcome\n");
+  help_command();
+  printf("\n");
 
   while (!complete) {
     printf("DATABASE QUERIES> ");
@@ -122,13 +124,31 @@ void close_connection() {
 //function to show usage
 void help_command() {
   printf("Available Commands:\n");
-  printf("  help: returns list of available commands\n");
-  printf("  <SQL COMMAND>: can insert an SQL command to query to the server\n");
-  printf("  exit: exits the REPL\n");
+  printf("  help\n");
+  printf("    - returns list of available commands\n");
+  printf("  get tables {{ database name }}\n");
+  printf("    - returns the tables of a database\n");
+  printf("  get columns {{ database name }} {{ table name }}\n");
+  printf("    - returns the columns of a table\n");
+  printf("  select {{ database name }} {{ table name }}\n");
+  printf("    - returns all of the rows of a table\n");
+  printf("  insert {{ database name }} {{ table name }} {{ comma-separated columns }} {{ comma-separated values }}\n");
+  printf("    - inserts a new row into a table and returns the rows of the table\n");
+  printf("  update {{ table name }} {{ field }} {{ value }} {{ where field }} {{ where value }}\n");
+  printf("    - inserts a new row into a table and returns the rows of the table\n");
+  printf("  delete {{ table name }} {{ where field }} {{ where value }}\n");
+  printf("    - inserts a new row into a table and returns the rows of the table\n");
+  printf("  exit\n");
+  printf("    - exits the REPL program\n");
 }
 
 int main(int argc, char ** argv, char ** envp) {
-  int port = DEFAULT_PORT;
+  unsigned int port = DEFAULT_PORT;
+
+  if (argc == 2) {
+    port = (unsigned int) atoi(argv[1]);
+  }
+
   //start conection at the beginning of main
   if (init_connection(port) != 0) {
     return EXIT_FAILURE;
