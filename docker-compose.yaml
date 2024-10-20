@@ -23,7 +23,8 @@ services:
       retries: 10
       start_period: 30s
       timeout: 5s
-  http-server:
+  http-server-1:
+    container_name: http-server-1
     build:
       context: .
       dockerfile: ./Docker/Dockerfile.http-server
@@ -39,10 +40,52 @@ services:
       mysql:
         condition: service_healthy
     ports:
-      - "8443-8445:8443"
+      - "8443:8443"
     networks: 
       - my_network
-    # restart: always
+    restart: always
+  http-server-2:
+    container_name: http-server-2
+    build:
+      context: .
+      dockerfile: ./Docker/Dockerfile.http-server
+    volumes:
+      - ./certs:/etc/mysql/certs
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: external_user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: my_database
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8444:8444"
+    networks: 
+      - my_network
+    restart: always
+  http-server-3:
+    container_name: http-server-3
+    build:
+      context: .
+      dockerfile: ./Docker/Dockerfile.http-server
+    volumes:
+      - ./certs:/etc/mysql/certs
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: external_user
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: my_database
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8445:8443"
+    networks: 
+      - my_network
+    restart: always
 volumes:
   mysqldb:
 networks:
