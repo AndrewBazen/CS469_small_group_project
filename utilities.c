@@ -7,29 +7,6 @@
 */
 #include "utilities.h"
 
-void seed_database() {
-    // Define the command to execute the script
-    const char *create = "docker exec -i mysql chmod +x /Docker/seed.sh";
-    const char *seed = "docker exec -i mysql /Docker/seed.sh";
-    
-    
-    // Execute the command
-    int result = system(create);
-    if (result == -1) {
-        perror("Error changing permissions on MySQL container");
-    } else {
-        printf("Permissions changed successfully on MySQL container\n");
-    }
-
-    result = system(seed);
-    
-    if (result == -1) {
-        perror("Error executing script on MySQL container");
-    } else {
-        printf("Script executed successfully on MySQL container\n");
-    }
-}
-
 Request* check_args(Request *req, int arg_number, SSL *ssl) {
     char error_buffer[BUFFER_SIZE];
 
@@ -176,6 +153,116 @@ Request* update_request(Request *req, char *contents, SSL *ssl) {
     return req;
 }
 
+void add_columns_to_buffer(MYSQL *db, Request *req, char *buffer, result *res, int num_cols) {
+    if (res == NULL) {
+			printf("Server: Error getting columns\n");
+			return;
+		}
+    num_cols = res->num_rows;
+    char *buffer_ptr = buffer;
+    int i = 0;
+
+    while (res != NULL) {
+        i = 0;
+        buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+        for (int i = 0; i < num_cols - 1; i++) {
+            buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+        }
+        buffer_ptr += sprintf(buffer_ptr, "+\n|");
+        
+        // add the column names
+        i = 0;
+        if (num_cols % 2 == 0) {
+            while (res != NULL) {
+                if (i % (num_cols + 2) == 0) {
+                    buffer_ptr += sprintf(buffer_ptr, " %-15s |", *res->buffer);
+                }
+                res = res->next;
+                i++;
+            }
+        } else {
+            while (res != NULL) {
+                if (i % (num_cols + 1) == 0) {
+                    buffer_ptr += sprintf(buffer_ptr, " %-15s |", *res->buffer);
+                }
+                res = res->next;
+                i++;
+            }
+        }	
+
+        // add the bottom of the column headers
+        buffer_ptr += sprintf(buffer_ptr,"\n+-----------------");
+        for (int i = 0; i < num_cols - 1; i++) {
+            buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+        }
+        buffer_ptr += sprintf(buffer_ptr, "+\n");
+    }
+}
+
+void add_columns_to_insert_buffer(MYSQL *db, Request *req, char *buffer, result *res, int num_cols) {
+    if (res == NULL) {
+			printf("Server: Error getting columns\n");
+			return;
+		}
+    char *buffer_ptr = buffer;
+    num_cols = res->num_rows;
+    int i = 0;
+
+    // add the top of the table
+    for (int i = 0; i < num_cols - 1; i++) {
+        buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+    }
+    buffer_ptr += sprintf(buffer_ptr, "+\n|");
+    
+    // add the column names
+    i = 0;
+    while (i < num_cols) {
+        printf("i: %d\n", i);
+        printf("res->buffer: %s\n",req->cols[i]);
+        buffer_ptr += sprintf(buffer_ptr, " %-15s |", req->cols[i]);
+        i++;
+    }
+
+    // add the bottom of the column headers
+    buffer_ptr += sprintf(buffer_ptr,"\n+-----------------");
+    for (int i = 0; i < num_cols - 1; i++) {
+        buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+    }
+    buffer_ptr += sprintf(buffer_ptr, "+\n");
+}
+
+void add_rows_to_buffer(char *buffer, result *res, int num_cols) {
+    if (res == NULL) {
+			printf("Server: Error getting rows\n");
+			return;
+		}
+    char *buffer_ptr = buffer;
+    int i = 0;
+
+    // add the rows
+    while (res != NULL) {
+        i = 0;
+        buffer_ptr += sprintf(buffer_ptr, "|");
+        while (i < num_cols) {
+            if (res->end_of_row) {
+                buffer_ptr += sprintf(buffer_ptr, " %-15s |\n", *res->buffer);
+                res = res->next;	
+            } else {
+                buffer_ptr += sprintf(buffer_ptr, " %-15s |", *res->buffer);
+                res = res->next;
+            }
+            i++;
+        }
+    }
+
+    // add the bottom of the table
+		buffer_ptr += sprintf(buffer_ptr,"+-----------------");
+		for (int i = 0; i < num_cols - 1; i++) {
+			buffer_ptr += sprintf(buffer_ptr, "+-----------------");
+		}
+		buffer_ptr += sprintf(buffer_ptr, "+\n");
+}
+
 /**
  * @brief - This function reads a message from  an SSL object and returns the
  *         number of bytes read
@@ -194,30 +281,16 @@ int read_from_ssl(SSL *ssl, char* buffer, int size, char* type) {
         // If nbytes_read is less than zero, an error occurred.  Print an error 
         // message and exit the program
         if (nbytes_read < 0) {
-        fprintf(stderr, "Server: Error reading from socket: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+            fprintf(stderr, "Server: Error reading from socket: %s\n", strerror(errno));
+            exit(EXIT_FAILURE);
         }
         
         if (nbytes_read != 0) {
-        printf("Server: request received from client: \"%s\"\n", buffer);
-        return nbytes_read;
+            printf("Server: request received from client: \"%s\"\n", buffer);
+            return nbytes_read;
         }
         printf("Server: Client closed connection\n");
-        free(ssl);
-    } else if (strcmp(type, "Client") == 0) {
-        // If nbytes_read is less than zero, an error occurred.  Print an error 
-        // message and exit the program
-        if (nbytes_read < 0) {
-        fprintf(stderr, "Client: Error reading from socket: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
-        }
-
-        // If nbytes_read is zero, the client closed the connection.  Prints a message
-        // and then closes the socket descriptor, continuing to the next iteration
-        if (nbytes_read == 0) {
-        printf("Client: Server closed connection\n");
-        }
-    }
+    } 
     return nbytes_read;
 }
 
@@ -238,38 +311,21 @@ void write_to_ssl(SSL *ssl, char* buffer, int size, char* type) {
 
     if (strcmp(type, "Server") == 0) {
         if (strcmp(buffer, "exit") == 0) {
-        printf("Server: Client Disconnected from server\n");
-        free(ssl);
+            printf("Server: Client Disconnected from server\n");
+            free(ssl);
         }
         // If nbytes_written is less than zero, an error occurred.  Print an error 
         // message and exit the program
         else if (nbytes_written < 0) {
-        fprintf(stderr, "Server: Error writing to socket: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+            fprintf(stderr, "Server: Error writing to socket: %s\n", strerror(errno));
+            exit(EXIT_FAILURE);
         }
 
         // If nbytes_written is zero, the client closed the connection.  Prints a 
         // message and then closes the socket descriptor, continuing to the next
         // iteration
         else if (nbytes_written == 0) {
-        printf("Server: Client closed connection\n");
-        free(ssl);
+            printf("Server: Client closed connection\n");
         }
-
-    } else if (strcmp(type, "Client") == 0) {
-        // If nbytes_written is less than zero, an error occurred.  Print an error 
-        // message and exit the program
-        if (nbytes_written < 0) {
-        fprintf(stderr, "Client: Error writing to socket: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
-        }
-
-        // If nbytes_written is zero, the server closed the connection.  Prints a
-        // message and then closes frees the ssl object, then exits the program
-        if (nbytes_written == 0) {
-        printf("Client: Server closed connection\n");
-        free(ssl);
-        exit(EXIT_FAILURE);
-        }
-    }
+    } 
 }

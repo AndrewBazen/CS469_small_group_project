@@ -67,12 +67,6 @@ Request* process_request(Request *req, char *message, SSL *ssl) {
         req = temp_req;
         return req;
     } else {
-        if (strcmp(temp_req->operation, "seed-database") == 0) {
-            seed_database();
-            req = temp_req;
-            return req;
-        }
-
         //get
         if (strcmp(temp_req->operation, "get") == 0) {
             req = get_request(temp_req, contents, ssl);
