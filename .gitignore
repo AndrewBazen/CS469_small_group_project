@@ -6,3 +6,4 @@ connector.o
 request.o
 utilities.o
 .vscode/
+*.o
