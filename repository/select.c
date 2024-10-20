@@ -34,7 +34,6 @@ result* select_all(MYSQL *db, char *db_name, char *table_name) {
   }
   // drop the last comma
   param[strlen(param)-1] = '\0';
-  printf("%s\n", param);
 
   sprintf(query, SQL_SELECT_FROM_TABLE, param, table_name);
 
